@@ -113,7 +113,7 @@ export function TopicComposer({
                   <span className="min-w-0 flex-1 break-words">{t.text}</span>
                   <button
                     type="button"
-                    className="shrink-0 rounded-full px-2 py-1 text-xs font-bold text-text-dim hover:text-text"
+                    className="-my-1.5 -mr-2 inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-xs font-bold text-text-dim hover:text-text"
                     onClick={() => remove(t.id)}
                     aria-label={`「${t.text}」を取り消す`}
                   >

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { LIMITS } from "@/lib/limits";
 import { DECK_THEMES, DECK_THEME_KEYS, type DeckTheme } from "@/lib/decks/themes";
 import type { DeckInput } from "@/lib/decks/types";
-import { CardBack } from "./GachaCard";
+import { CardBack, CardFront } from "./GachaCard";
 
 export interface DeckEditorProps {
   initial?: Partial<DeckInput>;
@@ -104,6 +104,10 @@ export function DeckEditor({ initial, submitLabel, onSubmit, onDelete, deleteLab
           </div>
         </fieldset>
 
+        <div className="lg:hidden" aria-hidden="true">
+          <Preview theme={theme} title={title} sample={cards[0]} />
+        </div>
+
         <label className="block">
           <span className="label flex items-baseline justify-between">
             <span>カード（1行に1枚）</span>
@@ -154,14 +158,29 @@ export function DeckEditor({ initial, submitLabel, onSubmit, onDelete, deleteLab
         </div>
       </div>
 
-      <aside className="hidden lg:block" aria-label="プレビュー">
+      <aside className="hidden lg:block" aria-hidden="true">
         <div className="sticky top-8">
-          <span className="label">プレビュー</span>
-          <div className="relative aspect-[5/7] w-full shadow-[0_22px_40px_-16px_rgb(0_0_0/0.8)]">
-            <CardBack theme={theme} label={title || "デッキ名"} />
-          </div>
+          <Preview theme={theme} title={title} sample={cards[0]} stacked />
         </div>
       </aside>
     </form>
+  );
+}
+
+/** Both faces of the card as it will look on the table, using the first card as the sample. */
+function Preview({ theme, title, sample, stacked = false }: { theme: DeckTheme; title: string; sample?: string; stacked?: boolean }) {
+  const shadow = "shadow-[0_22px_40px_-16px_rgb(0_0_0/0.8)]";
+  return (
+    <div>
+      <span className="label">プレビュー</span>
+      <div className={stacked ? "grid gap-5" : "flex gap-4"}>
+        <div className={`relative aspect-[5/7] ${stacked ? "w-full" : "w-[min(40vw,9.5rem)]"} ${shadow}`}>
+          <CardBack theme={theme} label={title.trim() || "デッキ名"} />
+        </div>
+        <div className={`relative aspect-[5/7] ${stacked ? "w-full" : "w-[min(40vw,9.5rem)] rotate-3"} ${shadow}`}>
+          <CardFront theme={theme} text={sample ?? "1枚目のカードがここに表示されます"} deckTitle={title.trim() || "デッキ名"} order={1} />
+        </div>
+      </div>
+    </div>
   );
 }

@@ -171,4 +171,27 @@ describe("room rules", () => {
     await endRoom(db, host.code, host.token);
     await expectAppError(joinRoom(db, host.code, { nickname: "late" }), "conflict");
   });
+
+  it("keeps public info free of topics until the room ends, then shares the reveal", async () => {
+    const host = await createRoom(db, { nameMode: "named", hostNickname: "H" });
+    await addTopic(db, host.code, host.token, { text: "secret" });
+    const before = await getRoomPublicInfo(db, host.code);
+    expect(before).toEqual({ code: host.code, status: "collecting", nameMode: "named", reveal: null });
+    await startDrawing(db, host.code, host.token);
+    expect((await getRoomPublicInfo(db, host.code)).reveal).toBeNull();
+    await endRoom(db, host.code, host.token);
+    const after = await getRoomPublicInfo(db, host.code);
+    expect(after.reveal).toEqual([{ id: expect.any(String), text: "secret", order: null, author: "H" }]);
+  });
+
+  it("orders the reveal by draw order, with undrawn topics last", async () => {
+    const host = await createRoom(db, { endMode: "count", drawLimit: 2 });
+    for (const text of ["a", "b", "c", "d"]) await addTopic(db, host.code, host.token, { text });
+    await startDrawing(db, host.code, host.token);
+    await drawCard(db, host.code, host.token);
+    const last = await drawCard(db, host.code, host.token);
+    expect(last.ended).toBe(true);
+    const view = await getRoomView(db, host.code, host.token);
+    expect(view.reveal?.map((r) => r.order)).toEqual([1, 2, null, null]);
+  });
 });

@@ -29,15 +29,20 @@ export function handle<A extends unknown[]>(fn: (...args: A) => Promise<Response
 
 /** Reads a JSON body. Requiring the JSON content type also blocks simple cross-site form posts. */
 export async function readJson(req: Request): Promise<unknown> {
-  const type = req.headers.get("content-type") ?? "";
-  if (!type.includes("application/json")) {
+  const type = (req.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+  if (type !== "application/json") {
     throw new AppError("bad_request", "リクエストの形式が正しくありません");
   }
+  let body: unknown;
   try {
-    return await req.json();
+    body = await req.json();
   } catch {
     throw new AppError("bad_request", "リクエストの形式が正しくありません");
   }
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    throw new AppError("bad_request", "リクエストの形式が正しくありません");
+  }
+  return body;
 }
 
 export async function requireAdmin(): Promise<void> {

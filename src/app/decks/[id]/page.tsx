@@ -34,7 +34,7 @@ async function DeckLoader({ params }: Pick<PageProps<"/decks/[id]">, "params">) 
   if (!deck) notFound();
   return (
     <>
-      <h1 className="mb-8 text-center font-display text-[1.5rem] leading-tight">{deck.title}</h1>
+      <h1 className="mb-7 text-center text-sm font-bold text-text-dim short-landscape:sr-only">{deck.title}</h1>
       <DeckPlayer deck={deck} />
     </>
   );

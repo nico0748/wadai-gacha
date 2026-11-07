@@ -36,9 +36,8 @@ async function Loader({ params }: Pick<PageProps<"/d/[shareId]">, "params">) {
   if (!deck) notFound();
   return (
     <>
-      <div className="mb-8 flex flex-col items-center gap-2 text-center">
-        <h1 className="font-display text-[1.5rem] leading-tight">{deck.title}</h1>
-        {deck.description ? <p className="max-w-[28em] text-sm text-text-dim">{deck.description}</p> : null}
+      <div className="mb-6 flex flex-col items-center gap-1 text-center short-landscape:sr-only">
+        <h1 className="text-sm font-bold text-text-dim">{deck.title}</h1>
         <ShareButton title={`${deck.title} | 話題ガチャ`} />
       </div>
       <DeckPlayer deck={deck} />

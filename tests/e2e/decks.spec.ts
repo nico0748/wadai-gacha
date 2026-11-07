@@ -4,10 +4,10 @@ test("draws from a built-in deck until it runs out, then reshuffles", async ({ p
   await page.goto("/decks");
   await page.getByRole("link", { name: /エンジニア/ }).first().click();
   await expect(page.getByRole("heading", { name: "エンジニア" })).toBeVisible();
-  await expect(page.getByText("山札 残り 30 枚")).toBeVisible();
+  await expect(page.getByText("残り30枚", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "カードを引く", exact: true }).click();
-  await expect(page.getByText("No.1")).toBeVisible();
-  await expect(page.getByText("山札 残り 29 枚")).toBeVisible();
+  await expect(page.getByText("No.1").first()).toBeVisible();
+  await expect(page.getByText("残り29枚", { exact: true })).toBeVisible();
 });
 
 test("creates a private deck, plays it by share link, and edits it", async ({ page }) => {
@@ -46,5 +46,5 @@ test("admin adds an official deck that appears in the deck list", async ({ page 
 
   await page.goto("/decks");
   await page.getByRole("link", { name: new RegExp(title) }).click();
-  await expect(page.getByText("山札 残り 3 枚")).toBeVisible();
+  await expect(page.getByText("残り3枚", { exact: true })).toBeVisible();
 });

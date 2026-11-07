@@ -65,6 +65,17 @@ export async function purgeExpiredRooms(db: Db): Promise<void> {
   await db.query("DELETE FROM rooms WHERE expires_at < now()");
 }
 
+// Expired rooms are invisible right away (every read filters on expires_at);
+// this actually deletes their rows, at most every few minutes per process.
+const PURGE_EVERY_MS = 5 * 60 * 1000;
+let lastPurge = 0;
+async function purgeIfDue(db: Db) {
+  const now = Date.now();
+  if (now - lastPurge < PURGE_EVERY_MS) return;
+  lastPurge = now;
+  await purgeExpiredRooms(db).catch((err) => console.error("Failed to purge expired rooms", err));
+}
+
 async function loadRoom(db: Db, code: string, forUpdate = false): Promise<RoomRow> {
   const rows = await db.query<RoomRow>(
     `SELECT * FROM rooms WHERE code = $1 AND expires_at > now()${forUpdate ? " FOR UPDATE" : ""}`,
@@ -135,6 +146,7 @@ function isUniqueViolation(err: unknown): boolean {
 
 export async function joinRoom(db: Db, code: string, input: unknown): Promise<Session> {
   const data = parseOrThrow(joinRoomSchema, input);
+  await purgeIfDue(db);
   return db.transaction(async (tx) => {
     const room = await loadRoom(tx, code, true);
     if (room.status === "ended") throw new AppError("conflict", "このルームのガチャはもう終わっています");
@@ -158,9 +170,14 @@ export async function joinRoom(db: Db, code: string, input: unknown): Promise<Se
 }
 
 export async function getRoomView(db: Db, code: string, token: string | null): Promise<RoomView> {
-  const room = await loadRoom(db, code);
-  const me = await authenticate(db, room, token);
-  return buildView(db, room, me);
+  await purgeIfDue(db);
+  // One snapshot for all the reads, so counts and drawn cards always agree.
+  return db.transaction(async (tx) => {
+    await tx.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+    const room = await loadRoom(tx, code);
+    const me = await authenticate(tx, room, token);
+    return buildView(tx, room, me);
+  });
 }
 
 async function buildView(db: Db, room: RoomRow, me: ParticipantRow): Promise<RoomView> {
@@ -204,7 +221,7 @@ async function loadReveal(db: Db, room: RoomRow): Promise<RevealItem[]> {
     `SELECT t.id, t.text, t.drawn_order AS "order", p.nickname
      FROM room_topics t JOIN participants p ON p.id = t.participant_id
      WHERE t.room_code = $1
-     ORDER BY t.drawn_order NULLS LAST, t.created_at, t.id`,
+     ORDER BY t.drawn_order NULLS LAST, t.id`, // ids are random, so undrawn topics do not cluster by author
     [room.code],
   );
   const named = room.name_mode === "named";
@@ -326,8 +343,18 @@ export async function endRoom(db: Db, code: string, token: string | null): Promi
   });
 }
 
-/** Public, unauthenticated facts needed to render the join screen. */
+/**
+ * Public facts needed to render the join screen. Once a room has ended, its
+ * list is public to anyone with the code, so people who lost their session
+ * (another browser, a cleared tab) still get the reveal.
+ */
 export async function getRoomPublicInfo(db: Db, code: string) {
+  await purgeIfDue(db);
   const room = await loadRoom(db, code);
-  return { code: room.code, status: room.status, nameMode: room.name_mode };
+  return {
+    code: room.code,
+    status: room.status,
+    nameMode: room.name_mode,
+    reveal: room.status === "ended" ? await loadReveal(db, room) : null,
+  };
 }

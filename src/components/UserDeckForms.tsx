@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { api, ApiError } from "@/lib/client/api";
 import { forgetOwnedDeck, saveOwnedDeck } from "@/lib/client/storage";
 import type { Deck, DeckInput } from "@/lib/decks/types";
@@ -16,13 +16,31 @@ function useOrigin() {
 
 export function NewUserDeck() {
   const router = useRouter();
+  const created = useRef<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
+
+  // Next keeps this page alive in the background after we navigate to the new
+  // deck. Start from an empty form when it is hidden, so going back does not
+  // offer to create the same deck a second time.
+  useEffect(
+    () => () => {
+      created.current = null;
+      setFormKey((k) => k + 1);
+    },
+    [],
+  );
+
   return (
     <DeckEditor
+      key={formKey}
       submitLabel="デッキを作る"
       onSubmit={async (input) => {
-        const { shareId, editKey } = await api<{ shareId: string; editKey: string }>("/api/decks", { body: input });
-        saveOwnedDeck({ shareId, editKey, title: input.title.trim(), theme: input.theme });
-        router.push(`/d/${shareId}/edit/${editKey}?created=1`);
+        if (!created.current) {
+          const { shareId, editKey } = await api<{ shareId: string; editKey: string }>("/api/decks", { body: input });
+          saveOwnedDeck({ shareId, editKey, title: input.title.trim(), theme: input.theme });
+          created.current = `/d/${shareId}/edit/${editKey}?created=1`;
+        }
+        router.push(created.current);
       }}
     />
   );
@@ -93,7 +111,7 @@ export function EditUserDeck({ shareId, editKey }: { shareId: string; editKey: s
       </section>
 
       <section aria-labelledby="edit-heading">
-        <h2 id="edit-heading" className="mb-6 font-display text-xl">
+        <h2 id="edit-heading" className="mb-6 text-xl font-black">
           内容を編集
         </h2>
         {saved ? (

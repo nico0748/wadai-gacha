@@ -11,7 +11,7 @@ test("host collects topics by QR, draws them, and everyone sees the reveal", asy
   await expect(page).toHaveURL(/\/room\/[A-Z0-9]{6}\/host$/);
   const code = page.url().match(/room\/([A-Z0-9]{6})/)![1];
   await expect(page.getByRole("img", { name: /参加用QRコード/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: "受付を締め切ってガチャを始める" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "締め切ってガチャを始める" })).toBeDisabled();
 
   // A participant joins on another phone.
   const guestCtx = await browser.newContext({ ...test.info().project.use });
@@ -31,20 +31,22 @@ test("host collects topics by QR, draws them, and everyone sees the reveal", asy
   await expect(guest.getByText("地元の自慢")).toHaveCount(0);
 
   // The host sees the count (but not the texts) and adds one of their own.
-  await expect(page.getByText("集まった話題", { exact: true }).locator("..")).toContainText("2");
+  const count = page.getByText("件の話題が集まりました").locator("..");
+  await expect(count).toContainText("2");
   await expect(page.getByText("推しのエディタ")).toHaveCount(0);
+  await page.getByRole("button", { name: "自分も話題を出す" }).click();
   await page.getByLabel("あなたも話題を出す").fill("子どもの頃の夢");
   await page.getByRole("button", { name: "投稿", exact: true }).click();
-  await expect(page.getByText("集まった話題", { exact: true }).locator("..")).toContainText("3");
+  await expect(count).toContainText("3");
 
-  await page.getByRole("button", { name: "受付を締め切ってガチャを始める" }).click();
-  await page.getByRole("button", { name: "締め切って始める" }).click();
+  await page.getByRole("button", { name: "締め切ってガチャを始める" }).click();
+  await page.getByRole("button", { name: "始める", exact: true }).click();
 
   await expect(guest.getByRole("heading", { name: "ホストのスマホに注目！" })).toBeVisible({ timeout: 10_000 });
 
   for (let i = 0; i < 3; i++) {
     await page.getByRole("button", { name: /^(次の)?カードを引く$/ }).click();
-    await expect(page.getByText(`No.${i + 1}`)).toBeVisible();
+    await expect(page.getByText(`No.${i + 1}`).first()).toBeVisible();
   }
   await expect(page.getByText("これが最後の1枚です")).toBeVisible();
 
@@ -58,4 +60,29 @@ test("host collects topics by QR, draws them, and everyone sees the reveal", asy
   await page.getByRole("button", { name: "結果を見る" }).click();
   await expect(page.getByRole("heading", { name: "ガチャ終了！" })).toBeVisible();
   await guestCtx.close();
+
+  // Someone who opens the QR link only after the end still gets the list.
+  const lateCtx = await browser.newContext({ ...test.info().project.use });
+  const late = await lateCtx.newPage();
+  await late.goto(`/room/${code}`);
+  await expect(late.getByRole("heading", { name: "ガチャ終了！" })).toBeVisible();
+  await expect(late.getByText("推しのエディタ")).toBeVisible();
+  await expect(late.getByRole("link", { name: "自分もルームを作る" })).toBeVisible();
+  await lateCtx.close();
+});
+
+test("the host can recover the room on another phone with the host link", async ({ page, browser }) => {
+  await page.goto("/room/new");
+  await page.getByRole("button", { name: "ルームを作ってQRを出す" }).click();
+  await expect(page).toHaveURL(/\/room\/[A-Z0-9]{6}\/host$/);
+  await page.getByText("このスマホが使えなくなったら").click();
+  const hostLink = await page.getByLabel("ホスト用リンク").inputValue();
+  expect(hostLink).toMatch(/\/host#k=/);
+
+  const otherCtx = await browser.newContext({ ...test.info().project.use });
+  const other = await otherCtx.newPage();
+  await other.goto(hostLink);
+  await expect(other.getByRole("button", { name: "締め切ってガチャを始める" })).toBeVisible();
+  await expect(other).not.toHaveURL(/#k=/);
+  await otherCtx.close();
 });

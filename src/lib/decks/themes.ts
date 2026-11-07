@@ -12,7 +12,7 @@ export type DeckTheme = keyof typeof DECK_THEMES;
 export const DECK_THEME_KEYS = Object.keys(DECK_THEMES) as DeckTheme[];
 
 export function isDeckTheme(value: string): value is DeckTheme {
-  return value in DECK_THEMES;
+  return Object.hasOwn(DECK_THEMES, value);
 }
 
 export function themeOf(value: string) {

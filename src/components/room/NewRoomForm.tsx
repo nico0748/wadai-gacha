@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
 import { saveRoomSession } from "@/lib/client/storage";
 import { LIMITS } from "@/lib/limits";
@@ -26,31 +26,33 @@ function Choice<T extends string>({
 }) {
   const checked = current === value;
   return (
-    <label
-      className={`flex cursor-pointer gap-3 rounded-[0.9rem] border p-4 transition-colors has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-lemon ${
+    <div
+      className={`rounded-[0.9rem] border transition-colors has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-lemon ${
         checked ? "border-candy bg-candy/8" : "border-line bg-ink-raised/50 hover:border-text-dim"
       }`}
     >
-      <input
-        type="radio"
-        name={name}
-        value={value}
-        checked={checked}
-        onChange={() => onChange(value)}
-        className="sr-only"
-      />
-      <span
-        aria-hidden="true"
-        className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${checked ? "border-candy" : "border-line"}`}
-      >
-        {checked ? <span className="h-2.5 w-2.5 rounded-full bg-candy" /> : null}
-      </span>
-      <span className="flex-1">
-        <span className="block font-bold">{title}</span>
-        <span className="mt-0.5 block text-sm text-text-dim">{body}</span>
-        {checked && children ? <span className="mt-3 block">{children}</span> : null}
-      </span>
-    </label>
+      <label className="flex cursor-pointer gap-3 p-4">
+        <input
+          type="radio"
+          name={name}
+          value={value}
+          checked={checked}
+          onChange={() => onChange(value)}
+          className="sr-only"
+        />
+        <span
+          aria-hidden="true"
+          className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${checked ? "border-candy" : "border-line"}`}
+        >
+          {checked ? <span className="h-2.5 w-2.5 rounded-full bg-candy" /> : null}
+        </span>
+        <span className="flex-1">
+          <span className="block font-bold">{title}</span>
+          <span className="mt-0.5 block text-sm text-text-dim">{body}</span>
+        </span>
+      </label>
+      {checked && children ? <div className="-mt-1 pr-4 pb-4 pl-12">{children}</div> : null}
+    </div>
   );
 }
 
@@ -63,12 +65,17 @@ export function NewRoomForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Next keeps this page alive in the background after navigating to the
+  // room, so clear the busy state when it is hidden; coming back with the
+  // browser's back button then shows a usable form again.
+  useEffect(() => () => setBusy(false), []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const session = await api<{ code: string; token: string; participantId: string }>("/api/rooms", {
+      const session = await api<{ code: string; token: string }>("/api/rooms", {
         body: {
           endMode,
           drawLimit: endMode === "count" ? Number(drawLimit) : null,
@@ -76,7 +83,7 @@ export function NewRoomForm() {
           hostNickname: nameMode === "none" ? undefined : hostNickname,
         },
       });
-      saveRoomSession(session.code, { token: session.token, participantId: session.participantId });
+      saveRoomSession(session.code, { token: session.token });
       router.push(`/room/${session.code}/host`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "ルームを作れませんでした");
@@ -87,7 +94,7 @@ export function NewRoomForm() {
   return (
     <form onSubmit={submit} className="grid gap-9">
       <fieldset className="grid gap-3">
-        <legend className="mb-3 font-display text-lg">いつ終わる？</legend>
+        <legend className="mb-3 text-lg font-black">いつ終わる？</legend>
         <Choice
           name="endMode"
           value="all"
@@ -104,7 +111,7 @@ export function NewRoomForm() {
           title="引く回数を決める"
           body="決めた回数を引いたら終了。話題がたくさん集まりそうなときに。"
         >
-          <span className="flex items-center gap-3">
+          <label className="flex items-center gap-3">
             <input
               type="number"
               inputMode="numeric"
@@ -113,16 +120,15 @@ export function NewRoomForm() {
               value={drawLimit}
               onChange={(e) => setDrawLimit(e.target.value)}
               className="field w-24 text-center font-bold"
-              aria-label="引く回数"
               required
             />
             <span className="font-bold">回引いたら終了</span>
-          </span>
+          </label>
         </Choice>
       </fieldset>
 
       <fieldset className="grid gap-3">
-        <legend className="mb-3 font-display text-lg">誰が書いたか、見せる？</legend>
+        <legend className="mb-3 text-lg font-black">誰が書いたか、見せる？</legend>
         <Choice
           name="nameMode"
           value="anonymous"
@@ -144,7 +150,7 @@ export function NewRoomForm() {
           value="none"
           current={nameMode}
           onChange={setNameMode}
-          title="ニックネームなし"
+          title="名前を聞かない"
           body="名前を入れずに、すぐ投稿できます。完全に匿名です。"
         />
       </fieldset>

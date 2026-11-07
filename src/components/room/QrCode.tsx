@@ -25,7 +25,7 @@ export function QrCode({ value, label }: { value: string; label: string }) {
     <div
       role="img"
       aria-label={label}
-      className="aspect-square w-full rounded-[1.4rem] bg-paper p-[9%] shadow-[0_24px_50px_-20px_rgb(0_0_0/0.8)] [&_svg]:h-full [&_svg]:w-full"
+      className="aspect-square w-full rounded-[1.4rem] bg-paper p-[12%] shadow-[0_24px_50px_-20px_rgb(0_0_0/0.8)] [&_svg]:h-full [&_svg]:w-full"
     >
       {svg ? (
         <div className="h-full w-full" dangerouslySetInnerHTML={{ __html: svg }} />

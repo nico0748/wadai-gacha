@@ -149,9 +149,11 @@ export async function createUserDeck(db: Db, input: DeckInput | unknown) {
   throw new AppError("conflict", "デッキを作成できませんでした。もう一度お試しください");
 }
 
-async function loadEditableUserDeck(db: Db, shareId: string, editKey: string | null) {
+async function loadEditableUserDeck(db: Db, shareId: string, editKey: string | null, forUpdate = true) {
   const rows = await db.query<DeckRow>(
-    "SELECT * FROM decks WHERE share_id = $1 AND kind = 'user' FOR UPDATE",
+    forUpdate
+      ? "SELECT * FROM decks WHERE share_id = $1 AND kind = 'user' FOR UPDATE"
+      : `${SUMMARY_SQL} WHERE d.share_id = $1 AND d.kind = 'user'`,
     [shareId],
   );
   const row = rows[0];
@@ -163,10 +165,8 @@ async function loadEditableUserDeck(db: Db, shareId: string, editKey: string | n
 }
 
 export async function getUserDeckForEdit(db: Db, shareId: string, editKey: string | null): Promise<Deck> {
-  return db.transaction(async (tx) => {
-    const row = await loadEditableUserDeck(tx, shareId, editKey);
-    return { ...toSummary(row), cards: await loadCards(tx, row.id) };
-  });
+  const row = await loadEditableUserDeck(db, shareId, editKey, false);
+  return { ...toSummary(row), cards: await loadCards(db, row.id) };
 }
 
 export async function updateUserDeck(db: Db, shareId: string, editKey: string | null, input: unknown) {

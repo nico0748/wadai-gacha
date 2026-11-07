@@ -38,10 +38,14 @@ html {
 }
 
 body {
+  /* One warm lamp over the table, felt grain, and darker edges. */
   background:
-    radial-gradient(120% 60% at 50% -10%, rgb(255 212 71 / 0.09), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(90% 55% at 50% 18%, rgb(255 214 140 / 0.11), transparent 70%),
+    radial-gradient(140% 100% at 50% 40%, transparent 55%, rgb(5 3 15 / 0.55)),
     var(--color-ink);
   background-attachment: fixed;
+  overflow-x: clip;
   color: var(--color-text);
   font-family: var(--font-sans);
   font-feature-settings: "palt";
@@ -62,7 +66,7 @@ body {
   @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 text-[0.95rem] font-bold tracking-wide transition-[transform,background-color,box-shadow,opacity,border-color,color] duration-150 select-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40;
 }
 @utility btn-primary {
-  @apply btn bg-candy text-white shadow-[0_6px_0_var(--color-candy-deep)] hover:brightness-105 active:translate-y-[3px] active:shadow-[0_3px_0_var(--color-candy-deep)];
+  @apply btn bg-candy text-paper-ink shadow-[0_6px_0_var(--color-candy-deep)] hover:brightness-105 active:translate-y-[3px] active:shadow-[0_3px_0_var(--color-candy-deep)];
 }
 @utility btn-quiet {
   @apply btn border border-line bg-ink-raised text-text hover:border-text-dim;
@@ -77,15 +81,29 @@ body {
   @apply mb-2 block text-sm font-bold text-text-dim;
 }
 
-/* Card backs: a field of tiny capsules, tinted per deck. */
-.card-back-pattern {
-  background-image:
-    radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.22) 0 3px, transparent 3.5px),
-    radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.1) 0 3px, transparent 3.5px);
-  background-size: 22px 22px;
-  background-position:
-    0 0,
-    11px 11px;
+/* Japanese text that wraps only between phrases (pair with <Phrase>). */
+@utility jp-wrap {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  line-break: strict;
+}
+
+/* A phone lying sideways on the table: card beside the controls. */
+@custom-variant short-landscape (@media (orientation: landscape) and (max-height: 540px));
+
+/* The drawn card: as big as the screen allows, portrait or landscape. */
+.card-size {
+  width: min(84vw, 22rem, max(12rem, calc((100svh - 15rem) * 0.714)));
+}
+@media (min-width: 1024px) and (min-height: 820px) {
+  .card-size {
+    width: 24rem;
+  }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  .card-size {
+    width: calc((100svh - 6.5rem) * 0.714);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

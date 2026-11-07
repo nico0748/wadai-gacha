@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { api, ApiError } from "@/lib/client/api";
 import { LIMITS } from "@/lib/limits";
-import type { NameMode, RoomStatus, RoomView } from "@/lib/rooms/types";
+import type { NameMode, RevealItem, RoomStatus, RoomView } from "@/lib/rooms/types";
 import { CardBack } from "../GachaCard";
 import { Notice, RoomRules } from "./bits";
 import { RevealList } from "./RevealList";
@@ -15,7 +15,7 @@ import { useRoom } from "./useRoom";
 
 export function ParticipantRoom({ code }: { code: string }) {
   const router = useRouter();
-  const { session, state, refresh, offline, join } = useRoom(code, () => 2500);
+  const { session, state, refresh, offline, join } = useRoom(code, { pollMs: () => 2500 });
 
   const isHost = state.kind === "ready" && state.view.role === "host";
   useEffect(() => {
@@ -64,15 +64,21 @@ export function ParticipantRoom({ code }: { code: string }) {
   );
 }
 
-function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: string; participantId: string }) => void }) {
-  const [info, setInfo] = useState<{ status: RoomStatus; nameMode: NameMode } | null>(null);
+interface PublicInfo {
+  status: RoomStatus;
+  nameMode: NameMode;
+  reveal: RevealItem[] | null;
+}
+
+function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: string }) => void }) {
+  const [info, setInfo] = useState<PublicInfo | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [nickname, setNickname] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api<{ status: RoomStatus; nameMode: NameMode }>(`/api/rooms/${encodeURIComponent(code)}/info`)
+    api<PublicInfo>(`/api/rooms/${encodeURIComponent(code)}/info`)
       .then(setInfo)
       .catch((e) => setLoadError(e instanceof ApiError ? e.message : "ルームを読み込めませんでした"));
   }, [code]);
@@ -88,7 +94,16 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
   }
   if (!info) return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
   if (info.status === "ended") {
-    return <Notice title="このガチャは終了しています" body="次のルームが立ったら、また参加してください。" />;
+    return (
+      <div className="mx-auto w-full max-w-xl">
+        <h1 className="font-display text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ガチャ終了！</h1>
+        <p className="mt-2 text-text-dim">ルーム {code} で集まった話題を、全部公開しています。</p>
+        <div className="mt-10">
+          <RevealList items={info.reveal ?? []} named={info.nameMode === "named"} />
+        </div>
+        <EndActions />
+      </div>
+    );
   }
 
   const needsName = info.nameMode !== "none";
@@ -98,7 +113,7 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
     setBusy(true);
     setError(null);
     try {
-      const s = await api<{ token: string; participantId: string }>(
+      const s = await api<{ token: string }>(
         `/api/rooms/${encodeURIComponent(code)}/participants`,
         { body: needsName ? { nickname } : {} },
       );
@@ -195,9 +210,14 @@ function Waiting({ view }: { view: RoomView }) {
       </div>
       <h1 className="font-display text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">ホストのスマホに注目！</h1>
       <p className="mt-3 text-text-dim">
-        ガチャが始まりました。いま
-        <span className="mx-1 font-bold text-text tabular-nums">{view.room.drawCount}枚目</span>
-        まで引かれています。終わったら、ここに全部の話題が届きます。
+        {view.room.drawCount === 0 ? (
+          "ガチャが始まりました。もうすぐ1枚目が引かれます。"
+        ) : (
+          <>
+            これまでに<span className="mx-1 font-bold text-text tabular-nums">{view.room.drawCount}枚</span>引かれました。
+          </>
+        )}
+        終わったら、ここに全部の話題が届きます。
       </p>
       {view.myTopics.length > 0 ? (
         <section className="mt-10 w-full text-left" aria-label="あなたの投稿">
@@ -231,13 +251,26 @@ function Reveal({ view }: { view: RoomView }) {
         </p>
       </motion.div>
       <div className="mt-10">
-        <RevealList items={view.reveal ?? []} mine={view.myTopics.map((t) => t.id)} />
+        <RevealList
+          items={view.reveal ?? []}
+          mine={view.myTopics.map((t) => t.id)}
+          named={view.room.nameMode === "named"}
+        />
       </div>
-      <div className="mt-12">
-        <Link href="/" className="btn-quiet">
-          トップへ
-        </Link>
-      </div>
+      <EndActions />
     </>
+  );
+}
+
+function EndActions() {
+  return (
+    <div className="mt-12 flex flex-wrap gap-3">
+      <Link href="/room/new" className="btn-primary">
+        自分もルームを作る
+      </Link>
+      <Link href="/" className="btn-quiet">
+        トップへ
+      </Link>
+    </div>
   );
 }

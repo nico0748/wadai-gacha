@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.15",
+    "budoux": "^0.10.3",
     "motion": "^14.10.1",
     "next": "16.4.5",
     "postgres": "^4.1.0",

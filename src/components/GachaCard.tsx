@@ -1,32 +1,53 @@
 import type { CSSProperties } from "react";
 import { themeOf } from "@/lib/decks/themes";
 import { CapsuleMark } from "./Logo";
+import { Phrase } from "./Phrase";
 
-export const CARD_WIDTH = "min(72vw, 19rem, calc((100svh - 17rem) * 0.714))";
-
+/**
+ * Topic size in container units (cqi = 1% of the card's width), so the text
+ * scales with the card whether it is a full-screen draw or a small preview.
+ */
 function topicSize(text: string): string {
   const n = [...text].length;
-  if (n <= 10) return "clamp(1.6rem, 8.4vw, 2.05rem)";
-  if (n <= 22) return "clamp(1.35rem, 6.8vw, 1.7rem)";
-  if (n <= 40) return "clamp(1.15rem, 5.6vw, 1.4rem)";
-  return "clamp(1rem, 4.8vw, 1.2rem)";
+  if (n <= 10) return "12cqi";
+  if (n <= 22) return "9.6cqi";
+  if (n <= 40) return "7.6cqi";
+  return "6.2cqi";
 }
+
+/** Two-tone capsules, tiled. Drawn in white so the deck gradient shows through. */
+const CAPSULE_TILE = encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 26 26'><g transform='rotate(-30 13 13)'><path d='M7 10.5h6v5H7a2.5 2.5 0 0 1 0-5z' fill='white' fill-opacity='.34'/><path d='M13 10.5h6a2.5 2.5 0 0 1 0 5h-6z' fill='white' fill-opacity='.14'/></g></svg>`,
+);
 
 export function CardBack({ theme, label }: { theme: string; label?: string }) {
   const t = themeOf(theme);
   return (
     <div
-      className="absolute inset-0 overflow-hidden rounded-card"
+      className="@container absolute inset-0 overflow-hidden rounded-card"
       style={{ background: `linear-gradient(150deg, ${t.from}, ${t.to})` }}
     >
-      <div className="card-back-pattern absolute inset-0" />
-      <div className="absolute inset-[7%] rounded-[0.7rem] border-[1.5px] border-white/40" />
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-        <div className="rounded-full bg-white/15 p-4 ring-1 ring-white/30 backdrop-blur-[2px]">
-          <CapsuleMark size={64} top="rgba(255,255,255,0.95)" />
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,${CAPSULE_TILE}"), url("data:image/svg+xml,${CAPSULE_TILE}")`,
+          backgroundSize: "26px 26px",
+          backgroundPosition: "0 0, 13px 13px",
+        }}
+      />
+      <div className="absolute inset-[5.5%] rounded-[0.75rem] border-[1.5px] border-white/45" />
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-[6cqi]">
+        <div
+          className="grid aspect-square w-[40cqi] place-items-center rounded-full bg-paper"
+          style={{ boxShadow: `0 0 0 2px ${t.ink}26, 0 0 0 7px rgb(255 250 240 / 0.28), 0 10px 24px -10px ${t.ink}` }}
+        >
+          <CapsuleMark top={t.from} className="h-[58%] w-[58%]" />
         </div>
         {label ? (
-          <span className="max-w-[80%] truncate text-sm font-bold text-white/90" style={{ textShadow: `0 1px 0 ${t.ink}55` }}>
+          <span
+            className="max-w-[78%] truncate rounded-full bg-paper px-[4.5cqi] py-[1.6cqi] text-[max(0.7rem,5.4cqi)] leading-tight font-black"
+            style={{ color: t.ink }}
+          >
             {label}
           </span>
         ) : null}
@@ -50,35 +71,50 @@ export function CardFront({
 }) {
   const t = themeOf(theme);
   return (
-    <div className="absolute inset-0 flex flex-col overflow-hidden rounded-card bg-paper text-paper-ink" style={style}>
+    <div
+      className="@container absolute inset-0 overflow-hidden rounded-card p-[2.2cqi]"
+      style={{ background: `linear-gradient(150deg, ${t.from}, ${t.to})`, ...style }}
+    >
       <div
-        className="flex items-center justify-between px-4 py-2.5 text-[0.8rem] font-bold text-white"
-        style={{ background: `linear-gradient(110deg, ${t.from}, ${t.to})` }}
+        className="relative flex h-full flex-col rounded-[calc(var(--radius-card)-0.3rem)] bg-paper text-paper-ink"
+        style={{ boxShadow: `inset 0 0 0 1px ${t.from}55, inset 0 0 0 4px rgb(255 250 240), inset 0 0 0 5px ${t.to}33` }}
       >
-        <span className="truncate">{deckTitle ?? "話題ガチャ"}</span>
-        {order ? <span className="shrink-0 tabular-nums">No.{order}</span> : null}
-      </div>
-      <div className="flex flex-1 items-center justify-center px-5 py-4">
-        <p
-          className="text-center font-black leading-snug [word-break:auto-phrase] [overflow-wrap:anywhere] [text-wrap:balance]"
-          style={{ fontSize: topicSize(text) }}
-        >
-          {text}
-        </p>
-      </div>
-      <div className="flex items-center justify-center gap-1.5 pb-3 text-[0.7rem] font-bold text-paper-ink/40">
-        <CapsuleMark size={14} top={t.from} />
-        話題ガチャ
-      </div>
-    </div>
-  );
-}
+        <div className="flex items-start justify-between gap-2 px-[5.5cqi] pt-[5cqi]">
+          {order ? (
+            <span className="flex flex-col items-center leading-none" style={{ color: t.ink }}>
+              <span className="text-[3.4cqi] font-black tracking-wider opacity-70">No.</span>
+              <span className="font-display text-[9cqi] tabular-nums">{order}</span>
+            </span>
+          ) : (
+            <span />
+          )}
+          {deckTitle ? (
+            <span
+              className="max-w-[60%] truncate rounded-full px-[3.4cqi] py-[1.2cqi] text-[3.8cqi] font-black"
+              style={{ background: `${t.from}22`, color: t.ink }}
+            >
+              {deckTitle}
+            </span>
+          ) : null}
+        </div>
 
-/** A static, non-animated card for lists and previews. */
-export function MiniCard({ theme, label }: { theme: string; label?: string }) {
-  return (
-    <div className="relative aspect-[5/7] w-full shadow-[0_10px_24px_-10px_rgb(0_0_0/0.6)]">
-      <CardBack theme={theme} label={label} />
+        <div className="flex flex-1 items-center justify-center px-[7cqi] pb-[4cqi]">
+          <p className="jp-wrap text-center leading-[1.42] font-black" style={{ fontSize: topicSize(text) }}>
+            <Phrase text={text} />
+          </p>
+        </div>
+
+        {order ? (
+          <span
+            className="absolute right-[5.5cqi] bottom-[5cqi] flex rotate-180 flex-col items-center leading-none"
+            style={{ color: t.ink }}
+            aria-hidden="true"
+          >
+            <span className="text-[3.4cqi] font-black tracking-wider opacity-70">No.</span>
+            <span className="font-display text-[9cqi] tabular-nums">{order}</span>
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
