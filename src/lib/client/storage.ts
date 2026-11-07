@@ -19,9 +19,12 @@ export interface OwnedDeck {
 }
 
 const memory = new Map<string, string>();
+// Keys whose latest value only made it into memory.
+const unsaved = new Set<string>();
 const listeners = new Set<() => void>();
 
 function getRaw(key: string): string | null {
+  if (unsaved.has(key)) return memory.get(key) ?? null;
   try {
     const v = window.localStorage.getItem(key);
     if (v !== null) return v;
@@ -35,8 +38,9 @@ function setRaw(key: string, value: string) {
   memory.set(key, value);
   try {
     window.localStorage.setItem(key, value);
+    unsaved.delete(key);
   } catch {
-    /* storage full or blocked: memory still has it */
+    unsaved.add(key); // storage full or blocked: memory still has it
   }
   listeners.forEach((cb) => cb());
 }

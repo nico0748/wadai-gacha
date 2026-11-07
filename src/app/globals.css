@@ -52,9 +52,41 @@ body {
   line-height: 1.7;
 }
 
-:focus-visible {
-  outline: 3px solid var(--color-lemon);
-  outline-offset: 3px;
+@layer base {
+  /* In a layer so components can swap it for their own focus style. */
+  :focus-visible {
+    outline: 3px solid var(--color-lemon);
+    outline-offset: 3px;
+  }
+}
+
+/* Break Japanese between phrases where the browser can (Chrome); <Phrase>
+   covers the headline copy everywhere else. */
+@supports (word-break: auto-phrase) {
+  body {
+    word-break: auto-phrase;
+  }
+}
+p {
+  text-wrap: pretty;
+}
+
+/* The note that replaces the draw button after the last card. It waits until
+   the card has turned over, so a quick double tap cannot hit it. */
+@keyframes note-in {
+  from {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+}
+.note-in {
+  animation: note-in 0.35s ease-out 1s both;
 }
 
 ::selection {
@@ -102,7 +134,7 @@ body {
 }
 @media (orientation: landscape) and (max-height: 540px) {
   .card-size {
-    width: calc((100svh - 6.5rem) * 0.714);
+    width: calc((100svh - 2.5rem) * 0.714);
   }
 }
 

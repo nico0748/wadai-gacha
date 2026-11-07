@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useSyncExternalStore } from "react";
 import { parseOwnedDecks, readOwnedDecksRaw, subscribeStorage } from "@/lib/client/storage";
 import { DeckTile } from "./DeckTile";
+import { Phrase } from "./Phrase";
 
 /** Decks this browser created. They are not public, so only this device lists them. */
 export function MyDecks() {
@@ -21,8 +22,8 @@ export function MyDecks() {
         </Link>
       </div>
       {decks.length === 0 ? (
-        <p className="mt-4 max-w-[34em] text-sm text-text-dim">
-          自分で作ったデッキは、ここに表示されます。共有用のURLを知っている人だけが遊べるので、身内ネタも気軽にどうぞ。
+        <p className="jp-wrap mt-4 max-w-[34em] text-sm text-text-dim">
+          <Phrase text="自分で作ったデッキは、ここに表示されます。共有用のURLを知っている人だけが遊べるので、身内ネタも気軽にどうぞ。" />
         </p>
       ) : (
         <ul className="mt-8 grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-4">

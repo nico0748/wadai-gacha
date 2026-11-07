@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { api } from "@/lib/client/api";
+import { useWakeLock } from "@/hooks/useWakeLock";
+import { api, ApiError } from "@/lib/client/api";
 import { saveRoomSession } from "@/lib/client/storage";
 import type { DrawResult, RoomView } from "@/lib/rooms/types";
 import { CardStage, type DrawnTopic } from "../CardStage";
 import { CopyField } from "../CopyField";
+import { Phrase } from "../Phrase";
 import { Notice, RoomRules } from "./bits";
 import { QrCode } from "./QrCode";
 import { RevealList } from "./RevealList";
@@ -18,23 +20,103 @@ const ROOM_THEME = "candy";
 const noop = () => () => {};
 const readHashKey = () => new URLSearchParams(window.location.hash.slice(1)).get("k");
 
+type Claim = { kind: "confirm" } | { kind: "invalid"; message: string };
+
 export function HostRoom({ code }: { code: string }) {
   // After the last card, stay on it until the host chooses to see the results.
   const [holding, setHolding] = useState(false);
-  const { session, state, setView, refresh, offline } = useRoom(code, {
-    pollMs: (v) => (!v || v.room.status === "collecting" ? 2000 : 8000),
-    paused: holding,
-  });
-
-  // A host link (#k=…) moves host rights to this device.
+  // A host link (#k=…) moves host rights to this device, once checked.
   const hashKey = useSyncExternalStore(noop, readHashKey, () => null);
+  const [claim, setClaim] = useState<Claim | null>(null);
+  const { session, state, setView, refresh, offline, mutate } = useRoom(code, {
+    pollMs: (v) => (!v || v.room.status === "collecting" ? 2000 : 8000),
+    paused: holding || Boolean(hashKey),
+  });
+  const status = state.kind === "ready" ? state.view.room.status : null;
+  useWakeLock(state.kind === "ready" && state.view.role === "host" && status !== "ended");
+  // Each phase starts at the top of the screen.
+  const phase = holding ? "holding" : status;
   useEffect(() => {
-    if (!hashKey) return;
-    saveRoomSession(code, { token: hashKey });
-    window.history.replaceState(null, "", window.location.pathname);
-  }, [hashKey, code]);
+    if (phase && phase !== "holding") window.scrollTo(0, 0);
+  }, [phase]);
 
-  if (state.kind === "loading" || session === undefined || (hashKey && !session)) {
+  const clearHash = useCallback(() => window.history.replaceState(null, "", window.location.pathname), []);
+  const takeOver = useCallback(
+    (key: string) => {
+      saveRoomSession(code, { token: key });
+      clearHash();
+      setClaim(null);
+    },
+    [code, clearHash],
+  );
+
+  useEffect(() => {
+    if (!hashKey || session === undefined) return;
+    if (session?.token === hashKey) {
+      clearHash();
+      return;
+    }
+    let cancelled = false;
+    // Only a real host token may replace what this device already has.
+    api<RoomView>(`/api/rooms/${encodeURIComponent(code)}`, { token: hashKey })
+      .then((v) => {
+        if (cancelled) return;
+        if (v.role !== "host") {
+          clearHash();
+          setClaim({ kind: "invalid", message: "このリンクはホスト用ではありません。" });
+        } else if (session) {
+          setClaim({ kind: "confirm" });
+        } else {
+          takeOver(hashKey);
+        }
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        clearHash();
+        setClaim({
+          kind: "invalid",
+          message: e instanceof ApiError ? e.message : "リンクを確認できませんでした。電波のよい場所でもう一度開いてください。",
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hashKey, session, code, clearHash, takeOver]);
+
+  if (claim?.kind === "invalid") {
+    return (
+      <Notice title="ホスト用リンクを使えませんでした" body={claim.message}>
+        <Link href={`/room/${code}`} className="btn-quiet">
+          参加者として開く
+        </Link>
+      </Notice>
+    );
+  }
+  if (hashKey && claim?.kind === "confirm") {
+    return (
+      <Notice
+        title="この端末をホストに切り替えますか？"
+        body="この端末はすでにこのルームに参加しています。切り替えると、この端末からは参加者として出した話題が見えなくなります。"
+      >
+        <div className="flex flex-wrap gap-3">
+          <button type="button" className="btn-primary" onClick={() => takeOver(hashKey)}>
+            ホストに切り替える
+          </button>
+          <button
+            type="button"
+            className="btn-quiet"
+            onClick={() => {
+              clearHash();
+              setClaim(null);
+            }}
+          >
+            やめる
+          </button>
+        </div>
+      </Notice>
+    );
+  }
+  if (state.kind === "loading" || session === undefined || hashKey) {
     return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
   }
   if (state.kind === "gone") {
@@ -69,18 +151,20 @@ export function HostRoom({ code }: { code: string }) {
         </p>
       ) : null}
       {view.room.status === "collecting" ? (
-        <Collecting view={view} token={session.token} refresh={refresh} />
+        <Collecting view={view} token={session.token} refresh={refresh} mutate={mutate} />
       ) : view.room.status === "drawing" || holding ? (
         <Drawing
           view={view}
           token={session.token}
           setView={setView}
           refresh={refresh}
+          mutate={mutate}
           ended={holding}
           onEnded={() => setHolding(true)}
-          onShowResults={() => {
+          onShowResults={async () => {
+            // Fetch the reveal first, so the draw button never comes back in between.
+            await refresh();
             setHolding(false);
-            void refresh();
           }}
         />
       ) : (
@@ -108,7 +192,19 @@ function HostLink({ code, token }: { code: string; token: string }) {
   );
 }
 
-function Collecting({ view, token, refresh }: { view: RoomView; token: string; refresh: () => Promise<void> }) {
+type Mutate = <T>(fn: () => Promise<T>) => Promise<T>;
+
+function Collecting({
+  view,
+  token,
+  refresh,
+  mutate,
+}: {
+  view: RoomView;
+  token: string;
+  refresh: () => Promise<void>;
+  mutate: Mutate;
+}) {
   const reduce = useReducedMotion();
   const origin = useSyncExternalStore(noop, () => window.location.origin, () => "");
   const joinUrl = `${origin}/room/${view.room.code}`;
@@ -123,7 +219,7 @@ function Collecting({ view, token, refresh }: { view: RoomView; token: string; r
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/rooms/${view.room.code}/start`, { method: "POST", token });
+      await mutate(() => api(`/api/rooms/${view.room.code}/start`, { method: "POST", token }));
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "始められませんでした");
@@ -150,6 +246,11 @@ function Collecting({ view, token, refresh }: { view: RoomView; token: string; r
           <p className="font-display text-[2.1rem] leading-none tracking-[0.18em] tabular-nums" aria-hidden="true">
             {view.room.code}
           </p>
+          {origin ? (
+            <div className="mt-6 text-left">
+              <CopyField label="QRが読めない人には、このURLを送る" value={joinUrl} />
+            </div>
+          ) : null}
         </section>
 
         <section className="grid gap-8" aria-label="受付の状況">
@@ -233,6 +334,7 @@ function Drawing({
   token,
   setView,
   refresh,
+  mutate,
   ended,
   onEnded,
   onShowResults,
@@ -241,11 +343,13 @@ function Drawing({
   token: string;
   setView: (v: RoomView) => void;
   refresh: () => Promise<void>;
+  mutate: Mutate;
   ended: boolean;
   onEnded: () => void;
-  onShowResults: () => void;
+  onShowResults: () => Promise<void>;
 }) {
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [opening, setOpening] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
   const last = view.drawn.at(-1);
   const { room } = view;
@@ -253,22 +357,26 @@ function Drawing({
     room.endMode === "count" && room.drawLimit ? Math.max(room.drawLimit - room.drawCount, 0) : null;
   const left = drawsLeft !== null ? Math.min(view.counts.remaining, drawsLeft) : view.counts.remaining;
 
-  const draw = useCallback(async (): Promise<DrawnTopic> => {
-    const res = await api<DrawResult>(`/api/rooms/${room.code}/draw`, { method: "POST", token });
-    setView({
-      ...view,
-      room: { ...room, drawCount: res.card.order },
-      counts: { ...view.counts, remaining: res.remaining },
-      drawn: [...view.drawn, res.card],
-    });
-    if (res.ended) onEnded();
-    return { text: res.card.text, order: res.card.order };
-  }, [room, token, view, setView, onEnded]);
+  const draw = useCallback(
+    (): Promise<DrawnTopic> =>
+      mutate(async () => {
+        const res = await api<DrawResult>(`/api/rooms/${room.code}/draw`, { method: "POST", token });
+        if (res.ended) onEnded();
+        setView({
+          ...view,
+          room: { ...room, drawCount: res.card.order },
+          counts: { ...view.counts, remaining: res.remaining },
+          drawn: [...view.drawn, res.card],
+        });
+        return { text: res.card.text, order: res.card.order };
+      }),
+    [room, token, view, setView, onEnded, mutate],
+  );
 
   async function end() {
     setEndError(null);
     try {
-      await api(`/api/rooms/${room.code}/end`, { method: "POST", token });
+      await mutate(() => api(`/api/rooms/${room.code}/end`, { method: "POST", token }));
       await refresh();
     } catch (e) {
       setEndError(e instanceof Error ? e.message : "終了できませんでした");
@@ -294,9 +402,20 @@ function Drawing({
         blockedNote={
           <div className="flex w-full flex-col items-center gap-3 text-center">
             <p className="font-bold">これが最後の1枚です</p>
-            <p className="text-sm text-text-dim">参加者のスマホには、もう全部の話題が届いています。</p>
-            <button type="button" className="btn-primary w-full" onClick={onShowResults}>
-              結果を見る
+            <p className="jp-wrap text-sm text-text-dim">
+              <Phrase text="参加者のスマホには、もう全部の話題が届いています。" />
+            </p>
+            <button
+              type="button"
+              className="btn-primary w-full"
+              disabled={opening}
+              onClick={async () => {
+                setOpening(true);
+                await onShowResults();
+                setOpening(false);
+              }}
+            >
+              {opening ? "読み込んでいます…" : "結果を見る"}
             </button>
           </div>
         }
@@ -340,7 +459,9 @@ function Ended({ view }: { view: RoomView }) {
   return (
     <div className="mx-auto w-full max-w-xl">
       <h1 className="font-display text-[clamp(1.7rem,7vw,2.3rem)] leading-tight">ガチャ終了！</h1>
-      <p className="mt-2 text-text-dim">集まった話題を全部公開しました。参加者のスマホにも同じ一覧が表示されています。</p>
+      <p className="jp-wrap mt-2 text-text-dim">
+        <Phrase text="集まった話題を全部公開しました。参加者のスマホにも同じ一覧が表示されています。" />
+      </p>
       <div className="mt-10">
         <RevealList
           items={view.reveal ?? []}

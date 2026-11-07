@@ -20,10 +20,12 @@ export function NewUserDeck() {
   const [formKey, setFormKey] = useState(0);
 
   // Next keeps this page alive in the background after we navigate to the new
-  // deck. Start from an empty form when it is hidden, so going back does not
-  // offer to create the same deck a second time.
+  // deck. Once a deck was created, start from an empty form when the page is
+  // hidden, so going back does not offer to create it a second time. An
+  // unfinished draft is kept.
   useEffect(
     () => () => {
+      if (!created.current) return;
       created.current = null;
       setFormKey((k) => k + 1);
     },

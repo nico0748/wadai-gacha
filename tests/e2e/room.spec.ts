@@ -86,3 +86,19 @@ test("the host can recover the room on another phone with the host link", async 
   await expect(other).not.toHaveURL(/#k=/);
   await otherCtx.close();
 });
+
+test("a host link with a participant's token does not grant host rights", async ({ page, browser }) => {
+  await page.goto("/room/new");
+  await page.getByRole("button", { name: "ルームを作ってQRを出す" }).click();
+  await expect(page).toHaveURL(/\/room\/[A-Z0-9]{6}\/host$/);
+  const code = page.url().match(/room\/([A-Z0-9]{6})/)![1];
+  const res = await page.request.post(`/api/rooms/${code}/participants`, { data: { nickname: "ゲスト" } });
+  const { token } = await res.json();
+
+  const otherCtx = await browser.newContext({ ...test.info().project.use });
+  const other = await otherCtx.newPage();
+  await other.goto(`/room/${code}/host#k=${token}`);
+  await expect(other.getByRole("heading", { name: "ホスト用リンクを使えませんでした" })).toBeVisible();
+  await expect(other.getByRole("button", { name: "締め切ってガチャを始める" })).toHaveCount(0);
+  await otherCtx.close();
+});

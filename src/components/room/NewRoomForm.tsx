@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
 import { saveRoomSession } from "@/lib/client/storage";
 import { LIMITS } from "@/lib/limits";
+import { Phrase } from "../Phrase";
 import type { EndMode, NameMode } from "@/lib/rooms/types";
 
 function Choice<T extends string>({
@@ -48,7 +49,9 @@ function Choice<T extends string>({
         </span>
         <span className="flex-1">
           <span className="block font-bold">{title}</span>
-          <span className="mt-0.5 block text-sm text-text-dim">{body}</span>
+          <span className="jp-wrap mt-0.5 block text-sm text-text-dim">
+            <Phrase text={body} />
+          </span>
         </span>
       </label>
       {checked && children ? <div className="-mt-1 pr-4 pb-4 pl-12">{children}</div> : null}

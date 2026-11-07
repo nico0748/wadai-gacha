@@ -15,12 +15,12 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 export default function UserDeckPage({ params }: PageProps<"/d/[shareId]">) {
   return (
     <>
-      <SiteHeader>
+      <SiteHeader hideInLandscape>
         <Link href="/decks" className="btn-ghost text-sm">
           デッキ一覧
         </Link>
       </SiteHeader>
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center px-4 pt-2 pb-12 sm:px-6">
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center overflow-clip px-4 pt-2 pb-12 sm:px-6 short-landscape:py-4">
         <Suspense fallback={<PlaySkeleton />}>
           <Loader params={params} />
         </Suspense>

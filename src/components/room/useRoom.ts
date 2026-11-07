@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { usePolling } from "@/hooks/usePolling";
 import { api, ApiError } from "@/lib/client/api";
 import {
@@ -45,17 +45,26 @@ export function useRoom(code: string, { pollMs, paused = false }: Options) {
   const [offline, setOffline] = useState(false);
   // Bumped by every local update; a poll that started earlier is stale.
   const version = useRef(0);
+  // While a mutation (draw, start, end) is in flight, its own result wins.
+  const pending = useRef(0);
+  const token = session?.token;
+  const currentToken = useRef(token);
+  useEffect(() => {
+    if (currentToken.current !== token) version.current++;
+    currentToken.current = token;
+  }, [token]);
 
   const refresh = useCallback(async () => {
     if (!session) return;
     const startedAt = version.current;
+    const stale = () => version.current !== startedAt || pending.current > 0 || currentToken.current !== session.token;
     try {
       const view = await api<RoomView>(`/api/rooms/${encodeURIComponent(code)}`, { token: session.token });
-      if (version.current !== startedAt) return;
+      if (stale()) return;
       setFetched({ kind: "ready", view });
       setOffline(false);
     } catch (e) {
-      if (version.current !== startedAt) return;
+      if (stale()) return;
       if (e instanceof ApiError && e.status === 404) setFetched({ kind: "gone", message: e.message });
       else if (e instanceof ApiError && e.status === 401) setFetched({ kind: "no-session" });
       else setOffline(true);
@@ -82,5 +91,17 @@ export function useRoom(code: string, { pollMs, paused = false }: Options) {
     setFetched({ kind: "ready", view: v });
   }, []);
 
-  return { session, state, refresh, offline, join, setView };
+  /** Runs a change to the room; polls that land meanwhile are ignored. */
+  const mutate = useCallback(async <T,>(fn: () => Promise<T>): Promise<T> => {
+    pending.current++;
+    version.current++;
+    try {
+      return await fn();
+    } finally {
+      pending.current--;
+      version.current++;
+    }
+  }, []);
+
+  return { session, state, refresh, offline, join, setView, mutate };
 }

@@ -50,15 +50,7 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
   const [everShown, setEverShown] = useState(Boolean(initial));
   const counter = useRef(1);
   const busyRef = useRef(false);
-  const mounted = useRef(true);
   const t = themeOf(theme);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
 
   const draw = useCallback(async () => {
     if (busyRef.current || !canDraw) return;
@@ -69,17 +61,15 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
     setActive({ key, topic: null });
     try {
       const [topic] = await Promise.all([onDraw(), sleep(reduce ? 0 : ANTICIPATION_MS)]);
-      if (!mounted.current) return;
       setActive({ key, topic });
       setEverShown(true);
       if (!reduce) navigator.vibrate?.([12, 60, 24]);
     } catch (e) {
-      if (!mounted.current) return;
       setActive(null);
       setError(e instanceof Error ? e.message : "カードを引けませんでした");
     } finally {
       busyRef.current = false;
-      if (mounted.current) setBusy(false);
+      setBusy(false);
     }
   }, [canDraw, onDraw, reduce]);
 
@@ -162,8 +152,8 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
           >
             {everShown ? "次のカードを引く" : "カードを引く"}
           </button>
-        ) : (
-          blockedNote
+        ) : busy ? null : (
+          <div className={`flex w-full justify-center ${active ? "note-in" : ""}`}>{blockedNote}</div>
         )}
         <p className="text-sm text-text-dim tabular-nums">残り{remaining}枚</p>
         {error ? (

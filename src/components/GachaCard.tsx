@@ -9,10 +9,10 @@ import { Phrase } from "./Phrase";
  */
 function topicSize(text: string): string {
   const n = [...text].length;
-  if (n <= 10) return "12cqi";
-  if (n <= 22) return "9.6cqi";
-  if (n <= 40) return "7.6cqi";
-  return "6.2cqi";
+  if (n <= 10) return "15cqi";
+  if (n <= 22) return "12cqi";
+  if (n <= 40) return "9.4cqi";
+  return "7.6cqi";
 }
 
 /** Two-tone capsules, tiled. Drawn in white so the deck gradient shows through. */
@@ -72,7 +72,7 @@ export function CardFront({
   const t = themeOf(theme);
   return (
     <div
-      className="@container absolute inset-0 overflow-hidden rounded-card p-[2.2cqi]"
+      className="@container absolute inset-0 overflow-hidden rounded-card p-[2.2%]"
       style={{ background: `linear-gradient(150deg, ${t.from}, ${t.to})`, ...style }}
     >
       <div
@@ -98,7 +98,7 @@ export function CardFront({
           ) : null}
         </div>
 
-        <div className="flex flex-1 items-center justify-center px-[7cqi] pb-[4cqi]">
+        <div className="flex flex-1 items-center justify-center px-[5.5cqi] pb-[4cqi]">
           <p className="jp-wrap text-center leading-[1.42] font-black" style={{ fontSize: topicSize(text) }}>
             <Phrase text={text} />
           </p>

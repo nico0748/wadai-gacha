@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import type { Deck } from "@/lib/decks/types";
 import { CardStage, type DrawnTopic } from "./CardStage";
 
@@ -16,6 +17,7 @@ function shuffle<T>(items: T[]): T[] {
 /** Normal mode: the whole deck is shuffled on this device; drawn cards leave the pile. */
 export function DeckPlayer({ deck }: { deck: Pick<Deck, "title" | "theme" | "cards"> }) {
   const [round, setRound] = useState(0);
+  useWakeLock(true);
   return <Round key={round} deck={deck} onReshuffle={() => setRound((r) => r + 1)} />;
 }
 
@@ -45,7 +47,7 @@ function Round({ deck, onReshuffle }: { deck: Pick<Deck, "title" | "theme" | "ca
       blockedNote={
         <div className="flex w-full max-w-xs flex-col items-center gap-3 text-center">
           <p className="font-bold">全{deck.cards.length}枚、引き終わりました</p>
-          <button type="button" className="btn-primary w-full" onClick={onReshuffle}>
+          <button type="button" className="btn-quiet w-full" onClick={onReshuffle}>
             もう一度シャッフルする
           </button>
         </div>

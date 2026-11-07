@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { api, ApiError } from "@/lib/client/api";
 import { LIMITS } from "@/lib/limits";
 import type { NameMode, RevealItem, RoomStatus, RoomView } from "@/lib/rooms/types";
 import { CardBack } from "../GachaCard";
+import { Phrase } from "../Phrase";
 import { Notice, RoomRules } from "./bits";
 import { RevealList } from "./RevealList";
 import { TopicComposer } from "./TopicComposer";
@@ -77,11 +78,16 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const loadInfo = useCallback(
+    () =>
+      api<PublicInfo>(`/api/rooms/${encodeURIComponent(code)}/info`)
+        .then(setInfo)
+        .catch((e) => setLoadError(e instanceof ApiError ? e.message : "ルームを読み込めませんでした")),
+    [code],
+  );
   useEffect(() => {
-    api<PublicInfo>(`/api/rooms/${encodeURIComponent(code)}/info`)
-      .then(setInfo)
-      .catch((e) => setLoadError(e instanceof ApiError ? e.message : "ルームを読み込めませんでした"));
-  }, [code]);
+    void loadInfo();
+  }, [loadInfo]);
 
   if (loadError) {
     return (
@@ -97,7 +103,9 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
     return (
       <div className="mx-auto w-full max-w-xl">
         <h1 className="font-display text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ガチャ終了！</h1>
-        <p className="mt-2 text-text-dim">ルーム {code} で集まった話題を、全部公開しています。</p>
+        <p className="jp-wrap mt-2 text-text-dim">
+          <Phrase text={`ルーム ${code} で集まった話題を、全部公開しています。`} />
+        </p>
         <div className="mt-10">
           <RevealList items={info.reveal ?? []} named={info.nameMode === "named"} />
         </div>
@@ -119,8 +127,13 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
       );
       onJoined(s);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "参加できませんでした");
       setBusy(false);
+      // The room may have ended while this screen was open: show its results.
+      if (err instanceof ApiError && err.status === 409) {
+        await loadInfo();
+        return;
+      }
+      setError(err instanceof Error ? err.message : "参加できませんでした");
     }
   }
 
@@ -149,11 +162,15 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
               autoComplete="nickname"
               required
             />
-            {info.nameMode === "anonymous" ? (
-              <span className="mt-2 block text-sm text-text-dim">誰が何を投稿したかは、最後まで公開されません。</span>
-            ) : (
-              <span className="mt-2 block text-sm text-text-dim">ガチャが終わると、投稿した話題にこの名前が表示されます。</span>
-            )}
+            <span className="jp-wrap mt-2 block text-sm text-text-dim">
+              <Phrase
+                text={
+                  info.nameMode === "anonymous"
+                    ? "誰が何を投稿したかは、最後まで公開されません。"
+                    : "ガチャが終わると、投稿した話題にこの名前が表示されます。"
+                }
+              />
+            </span>
           </label>
         ) : (
           <p className="text-center text-sm text-text-dim">名前の入力は不要です。投稿は完全に匿名です。</p>
@@ -175,10 +192,10 @@ function Collecting({ view, token, refresh }: { view: RoomView; token: string; r
   return (
     <>
       <h1 className="font-display text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">話題を投稿しよう</h1>
-      <p className="mt-2 text-text-dim">
-        ほかの人の投稿は、ガチャが終わるまで見えません。今は
-        <span className="mx-1 font-bold text-lemon tabular-nums">{view.counts.topics}件</span>
-        集まっています。
+      <p className="jp-wrap mt-2 text-text-dim">
+        <Phrase text="ほかの人の投稿は、ガチャが終わるまで見えません。" />
+        <br />
+        今は<span className="mx-1 font-bold text-lemon tabular-nums">{view.counts.topics}件</span>集まっています。
       </p>
       <div className="mt-4">
         <RoomRules room={view.room} />
@@ -209,7 +226,7 @@ function Waiting({ view }: { view: RoomView }) {
         ))}
       </div>
       <h1 className="font-display text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">ホストのスマホに注目！</h1>
-      <p className="mt-3 text-text-dim">
+      <p className="jp-wrap mt-3 text-text-dim">
         {view.room.drawCount === 0 ? (
           "ガチャが始まりました。もうすぐ1枚目が引かれます。"
         ) : (
@@ -217,6 +234,7 @@ function Waiting({ view }: { view: RoomView }) {
             これまでに<span className="mx-1 font-bold text-text tabular-nums">{view.room.drawCount}枚</span>引かれました。
           </>
         )}
+        <br />
         終わったら、ここに全部の話題が届きます。
       </p>
       {view.myTopics.length > 0 ? (

@@ -12,9 +12,13 @@ export function CapsuleMark({ size = 28, top = "#ff5c8a", className }: { size?: 
   );
 }
 
-export function SiteHeader({ children }: { children?: React.ReactNode }) {
+export function SiteHeader({ children, hideInLandscape = false }: { children?: React.ReactNode; hideInLandscape?: boolean }) {
   return (
-    <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-2 sm:px-6">
+    <header
+      className={`mx-auto flex w-full max-w-5xl items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-2 sm:px-6 ${
+        hideInLandscape ? "short-landscape:hidden" : ""
+      }`}
+    >
       <Link href="/" className="flex items-center gap-2 rounded-full py-1 pr-2" aria-label="話題ガチャ トップへ">
         <CapsuleMark size={26} />
         <span className="font-display text-[1.05rem] tracking-wide">話題ガチャ</span>
