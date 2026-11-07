@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
+/*
+ * 話題ガチャ — a card table at night.
+ * Deep indigo felt under a single warm lamp; the cards carry the colour.
+ */
+@theme {
+  --color-ink: #16122b;
+  --color-ink-raised: #211b3f;
+  --color-ink-sunk: #100d21;
+  --color-line: #3a3263;
+  --color-paper: #fffaf0;
+  --color-paper-ink: #231a3a;
+  --color-text: #f3efff;
+  --color-text-dim: #aaa3cc;
+  --color-candy: #ff5c8a;
+  --color-candy-deep: #e23d6d;
+  --color-lemon: #ffd447;
+  --color-mint: #3fe0b2;
+  --color-danger: #ff7a7a;
+
+  --font-display: var(--font-dela), "Hiragino Sans", sans-serif;
+  --font-sans: var(--font-zen), "Hiragino Maru Gothic ProN", "Hiragino Sans", sans-serif;
+
+  --radius-card: 1.125rem;
+  --radius-field: 0.75rem;
+
+  --ease-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgb(255 212 71 / 0.09), transparent 60%),
+    var(--color-ink);
+  background-attachment: fixed;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-feature-settings: "palt";
+  line-height: 1.7;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-lemon);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--color-candy);
+  color: white;
+}
+
+@utility btn {
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 text-[0.95rem] font-bold tracking-wide transition-[transform,background-color,box-shadow,opacity,border-color,color] duration-150 select-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40;
+}
+@utility btn-primary {
+  @apply btn bg-candy text-white shadow-[0_6px_0_var(--color-candy-deep)] hover:brightness-105 active:translate-y-[3px] active:shadow-[0_3px_0_var(--color-candy-deep)];
+}
+@utility btn-quiet {
+  @apply btn border border-line bg-ink-raised text-text hover:border-text-dim;
+}
+@utility btn-ghost {
+  @apply btn px-3 text-text-dim hover:text-text;
+}
+@utility field {
+  @apply w-full rounded-field border border-line bg-ink-sunk px-4 py-3 text-base text-text placeholder:text-text-dim/60 focus:border-lemon focus:outline-none;
+}
+@utility label {
+  @apply mb-2 block text-sm font-bold text-text-dim;
+}
+
+/* Card backs: a field of tiny capsules, tinted per deck. */
+.card-back-pattern {
+  background-image:
+    radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.22) 0 3px, transparent 3.5px),
+    radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.1) 0 3px, transparent 3.5px);
+  background-size: 22px 22px;
+  background-position:
+    0 0,
+    11px 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

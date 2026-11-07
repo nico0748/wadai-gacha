@@ -1,3 +1,4 @@
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { Db } from "./types";
 
@@ -27,6 +28,7 @@ async function open(): Promise<Db> {
     return createPostgresDb(url);
   }
   const { createPgliteDb } = await import("./pglite");
-  const dir = process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite");
+  const dir = path.resolve(process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite"));
+  await mkdir(dir, { recursive: true });
   return createPgliteDb(dir);
 }

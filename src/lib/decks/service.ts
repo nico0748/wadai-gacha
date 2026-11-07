@@ -95,7 +95,14 @@ const SUMMARY_SQL = `
 /** Decks shown in the deck list: built-in JSON decks first, then admin decks. */
 export async function listPublicDecks(db: Db): Promise<DeckSummary[]> {
   const rows = await db.query<DeckRow>(`${SUMMARY_SQL} WHERE d.kind = 'official' ORDER BY d.created_at`);
-  const builtin = BUILTIN_DECKS.map(({ cards: _cards, ...summary }) => summary);
+  const builtin: DeckSummary[] = BUILTIN_DECKS.map((d) => ({
+    id: d.id,
+    source: d.source,
+    title: d.title,
+    description: d.description,
+    theme: d.theme,
+    cardCount: d.cardCount,
+  }));
   return [...builtin, ...rows.map(toSummary)];
 }
 
