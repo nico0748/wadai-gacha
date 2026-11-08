@@ -140,7 +140,7 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
   return (
     <div className="mx-auto w-full max-w-md pt-4">
       <div className="mx-auto mb-8 w-28 -rotate-6">
-        <div className="relative aspect-[5/7] shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)]">
+        <div className="relative aspect-[5/7] rounded-card shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)]">
           <CardBack theme="candy" />
         </div>
       </div>
@@ -215,7 +215,7 @@ function Waiting({ view }: { view: RoomView }) {
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className="absolute inset-0 shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)]"
+            className="absolute inset-0 rounded-card shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)]"
             initial={false}
             animate={reduce ? undefined : { rotate: [i * 6 - 6, i * 6 - 3, i * 6 - 6], y: [0, -4, 0] }}
             transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.25, ease: "easeInOut" }}

@@ -104,16 +104,9 @@ export function CardFront({
           </p>
         </div>
 
-        {order ? (
-          <span
-            className="absolute right-[5.5cqi] bottom-[5cqi] flex rotate-180 flex-col items-center leading-none"
-            style={{ color: t.ink }}
-            aria-hidden="true"
-          >
-            <span className="text-[3.4cqi] font-black tracking-wider opacity-70">No.</span>
-            <span className="font-display text-[9cqi] tabular-nums">{order}</span>
-          </span>
-        ) : null}
+        <span className="absolute right-[5cqi] bottom-[4.5cqi] opacity-30" aria-hidden="true">
+          <CapsuleMark top={t.from} className="h-[9cqi] w-[9cqi]" />
+        </span>
       </div>
     </div>
   );
