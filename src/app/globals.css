@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+/*
+ * 話題ガチャ — a card table at night.
+ * Deep indigo felt under a single warm lamp; the cards carry the colour.
+ */
+@theme {
+  --color-ink: #16122b;
+  --color-ink-raised: #211b3f;
+  --color-ink-sunk: #100d21;
+  --color-line: #3a3263;
+  --color-paper: #fffaf0;
+  --color-paper-ink: #231a3a;
+  --color-text: #f3efff;
+  --color-text-dim: #aaa3cc;
+  --color-candy: #ff5c8a;
+  --color-candy-deep: #e23d6d;
+  --color-lemon: #ffd447;
+  --color-mint: #3fe0b2;
+  --color-danger: #ff7a7a;
+
+  --font-display: var(--font-dela), "Hiragino Sans", sans-serif;
+  --font-sans: var(--font-zen), "Hiragino Maru Gothic ProN", "Hiragino Sans", sans-serif;
+
+  --radius-card: 1.125rem;
+  --radius-field: 0.75rem;
+
+  --ease-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  background: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  /* One warm lamp over the table, felt grain, and darker edges. */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(90% 55% at 50% 18%, rgb(255 214 140 / 0.11), transparent 70%),
+    radial-gradient(140% 100% at 50% 40%, transparent 55%, rgb(5 3 15 / 0.55)),
+    var(--color-ink);
+  background-attachment: fixed;
+  overflow-x: clip;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-feature-settings: "palt";
+  line-height: 1.7;
+}
+
+@layer base {
+  /* In a layer so components can swap it for their own focus style. */
+  :focus-visible {
+    outline: 3px solid var(--color-lemon);
+    outline-offset: 3px;
+  }
+}
+
+/* Break Japanese between phrases where the browser can (Chrome); <Phrase>
+   covers the headline copy everywhere else. */
+@supports (word-break: auto-phrase) {
+  body {
+    word-break: auto-phrase;
+  }
+}
+p {
+  text-wrap: pretty;
+}
+
+/* The note that replaces the draw button after the last card. It waits until
+   the card has turned over, so a quick double tap cannot hit it. */
+@keyframes note-in {
+  from {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+}
+.note-in {
+  animation: note-in 0.35s ease-out 1s both;
+}
+
+::selection {
+  background: var(--color-candy);
+  color: white;
+}
+
+@utility btn {
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 text-[0.95rem] font-bold tracking-wide transition-[transform,background-color,box-shadow,opacity,border-color,color] duration-150 select-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40;
+}
+@utility btn-primary {
+  @apply btn bg-candy text-paper-ink shadow-[0_6px_0_var(--color-candy-deep)] hover:brightness-105 active:translate-y-[3px] active:shadow-[0_3px_0_var(--color-candy-deep)];
+}
+@utility btn-quiet {
+  @apply btn border border-line bg-ink-raised text-text hover:border-text-dim;
+}
+@utility btn-ghost {
+  @apply btn px-3 text-text-dim hover:text-text;
+}
+@utility field {
+  @apply w-full rounded-field border border-line bg-ink-sunk px-4 py-3 text-base text-text placeholder:text-text-dim/60 focus:border-lemon focus:outline-none;
+}
+@utility label {
+  @apply mb-2 block text-sm font-bold text-text-dim;
+}
+
+/* Japanese text that wraps only between phrases (pair with <Phrase>). */
+@utility jp-wrap {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  line-break: strict;
+}
+
+/* A phone lying sideways on the table: card beside the controls. */
+@custom-variant short-landscape (@media (orientation: landscape) and (max-height: 540px));
+
+/* The drawn card: as big as the screen allows, portrait or landscape. */
+.card-size {
+  width: min(84vw, 22rem, max(12rem, calc((100svh - 15rem) * 0.714)));
+}
+@media (min-width: 1024px) and (min-height: 820px) {
+  .card-size {
+    width: 24rem;
+  }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  .card-size {
+    width: calc((100svh - 2.5rem) * 0.714);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
