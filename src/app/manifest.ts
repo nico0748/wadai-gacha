@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "めくトーク",
     short_name: "めくトーク",
-    description: "その場のみんなで話題を出し合って、カードのガチャで引く。飲み会や雑談のお供に。",
+    description: "みんなで話題を出し合って、1枚ずつめくって話す。飲み会や雑談のお供に。",
     lang: "ja",
     start_url: "/",
     display: "standalone",
