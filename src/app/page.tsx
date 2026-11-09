@@ -3,8 +3,11 @@ import { SiteHeader } from "@/components/Logo";
 import { CardBack } from "@/components/GachaCard";
 import { JoinByCode } from "@/components/JoinByCode";
 import { Phrase } from "@/components/Phrase";
-import { BUILTIN_DECKS } from "@/lib/decks/builtin";
+import { findBuiltinDeck } from "@/lib/decks/builtin";
+import type { Deck } from "@/lib/decks/types";
 
+/** The decks on the home table: よる, the logo's colours, in the middle. */
+const FAN_DECKS = ["zatsudan", "shotaimen", "game"];
 const FAN = [
   { rotate: -11, x: "-58%", y: "10%" },
   { rotate: 0, x: "0%", y: "0%" },
@@ -12,7 +15,7 @@ const FAN = [
 ];
 
 export default function Home() {
-  const fanDecks = BUILTIN_DECKS.slice(0, 3);
+  const fanDecks = FAN_DECKS.map((id) => findBuiltinDeck(id)).filter((d): d is Deck => d !== undefined);
   return (
     <>
       <SiteHeader />
@@ -32,7 +35,7 @@ export default function Home() {
               ルームを作る
             </Link>
             <Link href="/decks" className="btn-quiet min-h-14 text-[1.05rem]">
-              用意されたデッキから引く
+              用意されたデッキでめくる
             </Link>
           </div>
 
@@ -41,27 +44,31 @@ export default function Home() {
           </div>
         </section>
 
-        <section aria-label="デッキ" className="relative mx-auto h-[19rem] w-full max-w-[26rem] sm:h-[23rem]">
-          {fanDecks.map((deck, i) => (
-            <Link
-              key={deck.id}
-              href={`/decks/${deck.id}`}
-              className="group absolute top-0 left-1/2 w-[38%] max-w-[10.5rem] rounded-card"
-              style={{
-                transform: `translateX(calc(-50% + ${FAN[i].x})) translateY(${FAN[i].y}) rotate(${FAN[i].rotate}deg)`,
-                zIndex: i === 1 ? 2 : 1,
-              }}
-              aria-label={`${deck.title}デッキで引く`}
-            >
-              <div className="relative aspect-[5/7] w-full rounded-card shadow-[0_22px_40px_-16px_rgb(0_0_0/0.8)] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-translate-y-3 group-focus-visible:-translate-y-3">
-                <CardBack theme={deck.theme} label={i === 1 ? deck.title : undefined} />
-              </div>
-            </Link>
-          ))}
-          <ul className="absolute inset-x-0 bottom-0 flex justify-center gap-6 text-sm font-bold text-text-dim">
+        <section aria-label="デッキ" className="@container mx-auto w-full max-w-[26rem]">
+          {/* As tall as the fan: a card is 38% of the width (at most 10.5rem), 7/5 as tall,
+              and the side cards hang a little lower. */}
+          <div className="relative h-[min(62cqi,17.1rem)]">
+            {fanDecks.map((deck, i) => (
+              <Link
+                key={deck.id}
+                href={`/decks/${deck.id}`}
+                className="group absolute top-0 left-1/2 w-[38%] max-w-[10.5rem] rounded-card"
+                style={{
+                  transform: `translateX(calc(-50% + ${FAN[i].x})) translateY(${FAN[i].y}) rotate(${FAN[i].rotate}deg)`,
+                  zIndex: i === 1 ? 2 : 1,
+                }}
+                aria-label={`${deck.title}デッキでめくる`}
+              >
+                <div className="relative aspect-[5/7] w-full rounded-card shadow-[0_22px_40px_-16px_rgb(0_0_0/0.8)] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-translate-y-3 group-focus-visible:-translate-y-3">
+                  <CardBack theme={deck.theme} label={i === 1 ? deck.title : undefined} />
+                </div>
+              </Link>
+            ))}
+          </div>
+          <ul className="mt-3 flex justify-center gap-3 text-sm font-bold text-text-dim">
             {fanDecks.map((deck) => (
               <li key={deck.id}>
-                <Link href={`/decks/${deck.id}`} className="rounded-full px-1 hover:text-text">
+                <Link href={`/decks/${deck.id}`} className="inline-flex min-h-11 items-center rounded-full px-3 hover:text-text">
                   {deck.title}
                 </Link>
               </li>
@@ -95,7 +102,10 @@ export default function Home() {
         </section>
       </main>
       <footer className="mx-auto w-full max-w-5xl px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-sm text-text-dim sm:px-6">
-        <Link href="/decks/new" className="underline decoration-line underline-offset-4 hover:text-text">
+        <Link
+          href="/decks/new"
+          className="inline-flex min-h-11 items-center underline decoration-line underline-offset-4 hover:text-text"
+        >
           自分だけのデッキを作る
         </Link>
       </footer>

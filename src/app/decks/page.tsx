@@ -23,7 +23,7 @@ export default function DecksPage() {
       </SiteHeader>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-16 sm:px-6">
         <h1 className="font-display text-[clamp(1.8rem,7vw,2.6rem)] leading-tight">デッキを選ぶ</h1>
-        <p className="mt-2 text-text-dim">選んだデッキの山札から、1枚ずつ引いていきます。</p>
+        <p className="mt-2 text-text-dim">選んだデッキの山札から、1枚ずつめくっていきます。</p>
 
         <ul className={`${GRID} mt-9`}>
           {BUILTIN_DECKS.map((d) => (
