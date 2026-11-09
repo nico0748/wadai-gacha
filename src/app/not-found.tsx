@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CardBack } from "@/components/GachaCard";
 import { JoinByCode } from "@/components/JoinByCode";
 import { SiteHeader } from "@/components/Logo";
 import { Phrase } from "@/components/Phrase";
+
+export const metadata: Metadata = { title: "見つかりません" };
 
 export default function NotFound() {
   return (
