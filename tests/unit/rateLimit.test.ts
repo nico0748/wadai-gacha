@@ -7,6 +7,7 @@ import {
   RATE_LIMITS,
   assertUnderLimit,
   clientIp,
+  guardRoomAccess,
   guardRoomLookup,
   purgeRateLimits,
   rateLimit,
@@ -103,6 +104,33 @@ describe("guardRoomLookup", () => {
   it("does not count other errors as misses", async () => {
     const conflict = () => Promise.reject(new AppError("conflict", "終わっています"));
     await expect(guardRoomLookup(db, "1.2.3.4", conflict)).rejects.toMatchObject({ code: "conflict" });
+    expect(await count("roomMiss:1.2.3.4")).toBe(0);
+  });
+});
+
+describe("guardRoomAccess", () => {
+  const ok = () => Promise.resolve("view");
+  const missing = () => Promise.reject(new AppError("not_found", "ルームが見つかりません"));
+  const wrongToken = () => Promise.reject(new AppError("unauthorized", "このルームに参加していません"));
+
+  it("answers 429 to both missing rooms and wrong tokens once an address has missed too often", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(T0);
+    await expect(guardRoomAccess(db, "1.2.3.4", wrongToken)).rejects.toMatchObject({ code: "unauthorized" });
+    for (let i = 0; i < RATE_LIMITS.roomMiss.limit; i++) {
+      await expect(guardRoomAccess(db, "1.2.3.4", missing)).rejects.toMatchObject({ code: "not_found" });
+    }
+    await expect(guardRoomAccess(db, "1.2.3.4", missing)).rejects.toMatchObject({ code: "rate_limited" });
+    await expect(guardRoomAccess(db, "1.2.3.4", wrongToken)).rejects.toMatchObject({ code: "rate_limited" });
+    // A real token still works, so a host behind the same Wi-Fi is not locked out.
+    await expect(guardRoomAccess(db, "1.2.3.4", ok)).resolves.toBe("view");
+    await expect(guardRoomAccess(db, "5.6.7.8", wrongToken)).rejects.toMatchObject({ code: "unauthorized" });
+  });
+
+  it("does not count wrong tokens or other errors as misses", async () => {
+    const forbidden = () => Promise.reject(new AppError("forbidden", "ホストだけ"));
+    await expect(guardRoomAccess(db, "1.2.3.4", wrongToken)).rejects.toMatchObject({ code: "unauthorized" });
+    await expect(guardRoomAccess(db, "1.2.3.4", forbidden)).rejects.toMatchObject({ code: "forbidden" });
     expect(await count("roomMiss:1.2.3.4")).toBe(0);
   });
 });

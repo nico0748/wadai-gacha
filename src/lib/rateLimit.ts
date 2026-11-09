@@ -102,6 +102,26 @@ export async function guardRoomLookup<T>(db: Db, ip: string, lookup: () => Promi
 }
 
 /**
+ * For room routes that need a token. A request with a valid token costs no
+ * extra query. A missing room counts as a miss, and once an address is over
+ * the miss limit, missing rooms and wrong tokens both answer 429, so the
+ * 404 / 401 difference stops telling a guesser which codes exist.
+ */
+export async function guardRoomAccess<T>(db: Db, ip: string, action: () => Promise<T>): Promise<T> {
+  try {
+    return await action();
+  } catch (err) {
+    if (err instanceof AppError && (err.code === "not_found" || err.code === "unauthorized")) {
+      const { limit, windowSeconds } = RATE_LIMITS.roomMiss;
+      const key = `roomMiss:${ip}`;
+      if (err.code === "not_found") await rateLimit(db, key, limit, windowSeconds);
+      else await assertUnderLimit(db, key, limit, windowSeconds);
+    }
+    throw err;
+  }
+}
+
+/**
  * The address to rate limit by: the first X-Forwarded-For entry (set by the
  * hosting proxy, e.g. Vercel), else X-Real-IP. IPv6 addresses are grouped by
  * their /64, since one phone or home usually gets a whole /64.
