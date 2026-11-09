@@ -17,7 +17,7 @@ export interface DeckEditorProps {
 export function DeckEditor({ initial, submitLabel, onSubmit, onDelete, deleteLabel = "このデッキを削除" }: DeckEditorProps) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
-  const [theme, setTheme] = useState<DeckTheme>(initial?.theme ?? "candy");
+  const [theme, setTheme] = useState<DeckTheme>(initial?.theme ?? "yoru");
   const [cardsText, setCardsText] = useState((initial?.cards ?? []).join("\n"));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +94,7 @@ export function DeckEditor({ initial, submitLabel, onSubmit, onDelete, deleteLab
                   className="peer sr-only"
                 />
                 <span
-                  className="block h-12 w-12 rounded-full ring-offset-4 ring-offset-ink transition peer-checked:ring-3 peer-checked:ring-text peer-focus-visible:outline-3 peer-focus-visible:outline-lemon"
+                  className="block h-12 w-12 rounded-full ring-offset-4 ring-offset-ink transition peer-checked:ring-3 peer-checked:ring-text peer-focus-visible:outline-3 peer-focus-visible:outline-lamp"
                   style={{ background: `linear-gradient(150deg, ${DECK_THEMES[key].from}, ${DECK_THEMES[key].to})` }}
                   title={DECK_THEMES[key].name}
                 />

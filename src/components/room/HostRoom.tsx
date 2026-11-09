@@ -6,39 +6,60 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { api, ApiError } from "@/lib/client/api";
 import { saveRoomSession } from "@/lib/client/storage";
-import type { DrawResult, RoomView } from "@/lib/rooms/types";
+import type { DrawResult, RevealItem, RoomPublicInfo, RoomView } from "@/lib/rooms/types";
 import { CardStage, type DrawnTopic } from "../CardStage";
 import { CopyField } from "../CopyField";
+import { CardFront } from "../GachaCard";
+import { RoomNotFound } from "../LostCard";
 import { Phrase } from "../Phrase";
-import { Notice, RoomRules } from "./bits";
+import { BottomBar, Notice, RoomRules } from "./bits";
+import { RevealCountdown } from "./countdown";
 import { QrCode } from "./QrCode";
+import { MakeDeckButton, ShareListButton } from "./ResultActions";
 import { RevealList } from "./RevealList";
 import { TopicComposer } from "./TopicComposer";
-import { useRoom } from "./useRoom";
+import { phaseOf, useRoom } from "./useRoom";
 
-const ROOM_THEME = "candy";
+const ROOM_THEME = "yoru";
 const noop = () => () => {};
 const readHashKey = () => new URLSearchParams(window.location.hash.slice(1)).get("k");
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-type Claim = { kind: "confirm" } | { kind: "invalid"; message: string };
+type Claim = { kind: "confirm" } | { kind: "invalid"; message: string } | { kind: "gone" };
+
+/** The host drives every change, so it only polls to see guests arrive and, rarely, to catch a reveal. */
+function hostPollMs(view: RoomView | null, due: boolean): number | null {
+  if (!view) return 2000;
+  switch (phaseOf(view)) {
+    case "collecting":
+      return 2000;
+    case "drawing":
+      return 8000;
+    // Cheap (?v=) and lets a host whose last refresh failed catch up.
+    case "held":
+      return due ? 200 : 3000;
+    default:
+      return null;
+  }
+}
 
 export function HostRoom({ code }: { code: string }) {
-  // After the last card, stay on it until the host chooses to see the results.
-  const [holding, setHolding] = useState(false);
   // A host link (#k=…) moves host rights to this device, once checked.
   const hashKey = useSyncExternalStore(noop, readHashKey, () => null);
   const [claim, setClaim] = useState<Claim | null>(null);
-  const { session, state, setView, refresh, offline, mutate } = useRoom(code, {
-    pollMs: (v) => (!v || v.room.status === "collecting" ? 2000 : 8000),
-    paused: holding || Boolean(hashKey),
+  const { session, state, setView, refresh, offline, mutate, clockOffset } = useRoom(code, {
+    pollMs: hostPollMs,
+    paused: Boolean(hashKey),
   });
-  const status = state.kind === "ready" ? state.view.room.status : null;
-  useWakeLock(state.kind === "ready" && state.view.role === "host" && status !== "ended");
-  // Each phase starts at the top of the screen.
-  const phase = holding ? "holding" : status;
+  const phase = state.kind === "ready" ? phaseOf(state.view) : null;
+  // The phone stays awake on the table until there is nothing left to show.
+  useWakeLock(state.kind === "ready" && state.view.role === "host" && phase !== "done");
+  // Each screen starts at the top. The last card stays put while the list is held.
+  const screen =
+    phase === null ? null : phase === "collecting" ? "collect" : phase === "drawing" || phase === "held" ? "draw" : "results";
   useEffect(() => {
-    if (phase && phase !== "holding") window.scrollTo(0, 0);
-  }, [phase]);
+    if (screen) window.scrollTo(0, 0);
+  }, [screen]);
 
   const clearHash = useCallback(() => window.history.replaceState(null, "", window.location.pathname), []);
   const takeOver = useCallback(
@@ -73,6 +94,10 @@ export function HostRoom({ code }: { code: string }) {
       .catch((e: unknown) => {
         if (cancelled) return;
         clearHash();
+        if (e instanceof ApiError && e.status === 404) {
+          setClaim({ kind: "gone" });
+          return;
+        }
         setClaim({
           kind: "invalid",
           message: e instanceof ApiError ? e.message : "リンクを確認できませんでした。電波のよい場所でもう一度開いてください。",
@@ -83,6 +108,28 @@ export function HostRoom({ code }: { code: string }) {
     };
   }, [hashKey, session, code, clearHash, takeOver]);
 
+  // A device that never joined this room: one lookup tells a missing room
+  // from someone else's. Only once, since a missing code counts against
+  // this network's limit on room lookups.
+  const [roomExists, setRoomExists] = useState<boolean | null>(null);
+  const lookUp = session === null && !hashKey && claim === null;
+  useEffect(() => {
+    if (!lookUp) return;
+    let cancelled = false;
+    api<RoomPublicInfo>(`/api/rooms/${encodeURIComponent(code)}/info`)
+      .then(() => {
+        if (!cancelled) setRoomExists(true);
+      })
+      .catch((e: unknown) => {
+        // Busy or offline: assume the room is there and show the notice.
+        if (!cancelled) setRoomExists(!(e instanceof ApiError && e.status === 404));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lookUp, code]);
+
+  if (claim?.kind === "gone") return <RoomNotFound />;
   if (claim?.kind === "invalid") {
     return (
       <Notice title="ホスト用リンクを使えませんでした" body={claim.message}>
@@ -119,16 +166,12 @@ export function HostRoom({ code }: { code: string }) {
   if (state.kind === "loading" || session === undefined || hashKey) {
     return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
   }
-  if (state.kind === "gone") {
-    return (
-      <Notice title="ルームが見つかりません" body={state.message}>
-        <Link href="/room/new" className="btn-primary">
-          新しいルームを作る
-        </Link>
-      </Notice>
-    );
-  }
+  if (state.kind === "gone") return <RoomNotFound />;
   if (state.kind === "no-session" || !session || state.view.role !== "host") {
+    if (session === null && roomExists === null) {
+      return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
+    }
+    if (session === null && roomExists === false) return <RoomNotFound />;
     return (
       <Notice
         title="この端末はホストではありません"
@@ -150,26 +193,14 @@ export function HostRoom({ code }: { code: string }) {
           接続が不安定です。再接続しています…
         </p>
       ) : null}
-      {view.room.status === "collecting" ? (
+      {phase === "collecting" ? (
         <Collecting view={view} token={session.token} refresh={refresh} mutate={mutate} />
-      ) : view.room.status === "drawing" || holding ? (
-        <Drawing
-          view={view}
-          token={session.token}
-          setView={setView}
-          refresh={refresh}
-          mutate={mutate}
-          ended={holding}
-          onEnded={() => setHolding(true)}
-          onShowResults={async () => {
-            // Fetch the reveal first, so the draw button never comes back in between.
-            await refresh();
-            setHolding(false);
-          }}
-        />
+      ) : phase === "drawing" || phase === "held" ? (
+        <Drawing view={view} token={session.token} setView={setView} refresh={refresh} mutate={mutate} />
       ) : (
-        <Ended view={view} />
+        <Results view={view} token={session.token} refresh={refresh} mutate={mutate} />
       )}
+      {phase === "held" ? <RevealCountdown revealAt={view.revealAt} offsetMs={clockOffset} /> : null}
     </>
   );
 }
@@ -185,7 +216,7 @@ function HostLink({ code, token }: { code: string; token: string }) {
         <CopyField
           label="ホスト用リンク"
           value={`${origin}/room/${code}/host#k=${token}`}
-          note="別の端末でこのリンクを開くと、そこからガチャを続けられます。参加者には見せないでください。"
+          note="別の端末でこのリンクを開くと、そこから続けられます。参加者には見せないでください。"
         />
       </div>
     </details>
@@ -193,6 +224,10 @@ function HostLink({ code, token }: { code: string; token: string }) {
 }
 
 type Mutate = <T>(fn: () => Promise<T>) => Promise<T>;
+
+function errorText(e: unknown, fallback: string) {
+  return e instanceof Error ? e.message : fallback;
+}
 
 function Collecting({
   view,
@@ -222,21 +257,25 @@ function Collecting({
       await mutate(() => api(`/api/rooms/${view.room.code}/start`, { method: "POST", token }));
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "始められませんでした");
+      setError(errorText(e, "始められませんでした"));
       setBusy(false);
     }
   }
 
   return (
-    <div className="pb-40">
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-start lg:gap-16">
-        <section className="mx-auto w-full max-w-[22rem] text-center" aria-labelledby="qr-heading">
+    <div className="pb-52 lg:grid lg:grid-cols-[minmax(0,22rem)_1fr] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-16 lg:gap-y-8 lg:pb-0">
+      <div className="grid gap-10 lg:contents">
+        <section
+          className="mx-auto w-full max-w-[22rem] text-center lg:col-start-1 lg:row-span-2 lg:row-start-1"
+          aria-labelledby="qr-heading"
+        >
           <h1 id="qr-heading" className="font-display text-[1.6rem] leading-tight">
             QRを読み込んで、
             <br />
             話題を投稿してね
           </h1>
-          <div className="mx-auto mt-6 w-[min(80vw,21rem)]">
+          {/* Smaller on short phones, so the code and the bottom bar fit too. */}
+          <div className="mx-auto mt-6 w-[min(80vw,21rem)] [@media(max-height:759.98px)]:w-[min(64vw,17rem)]">
             {origin ? <QrCode value={joinUrl} label={`参加用QRコード（${joinUrl}）`} /> : null}
           </div>
           <p className="mt-5 text-sm text-text-dim">
@@ -253,25 +292,7 @@ function Collecting({
           ) : null}
         </section>
 
-        <section className="grid gap-8" aria-label="受付の状況">
-          <div className="text-center lg:text-left" aria-live="polite">
-            <p className="flex items-baseline justify-center gap-2 lg:justify-start">
-              <motion.span
-                key={topics}
-                initial={reduce ? false : { scale: 1.3, color: "#ffd447" }}
-                animate={{ scale: 1, color: "#f3efff" }}
-                transition={{ type: "spring", stiffness: 300, damping: 16 }}
-                className="inline-block font-display text-[3.5rem] leading-none tabular-nums"
-              >
-                {topics}
-              </motion.span>
-              <span className="text-lg font-black">件の話題が集まりました</span>
-            </p>
-            <p className="mt-2 text-text-dim">
-              参加 <span className="font-bold text-text tabular-nums">{guests}</span> 人（ホストを除く）
-            </p>
-          </div>
-
+        <section className="grid gap-8 lg:col-start-2 lg:row-start-2" aria-label="受付の状況">
           <div className="flex justify-center lg:justify-start">
             <RoomRules room={view.room} />
           </div>
@@ -290,43 +311,72 @@ function Collecting({
         </section>
       </div>
 
-      {/* Sticky so the start button is always in reach on a phone. */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line/70 bg-ink/92 px-4 pt-3 pb-[max(0.9rem,env(safe-area-inset-bottom))] backdrop-blur-md">
-        <div className="mx-auto grid max-w-xl gap-2">
-          {confirming ? (
-            <>
-              <p className="text-center text-sm font-bold">締め切ると、もう投稿できなくなります。始めますか？</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" className="btn-quiet" onClick={() => setConfirming(false)} disabled={busy}>
-                  もう少し待つ
-                </button>
-                <button type="button" className="btn-primary" onClick={start} disabled={busy}>
-                  {busy ? "準備しています…" : "始める"}
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="btn-primary min-h-14 text-[1.05rem]"
-                onClick={() => setConfirming(true)}
-                disabled={topics === 0}
-              >
-                締め切ってガチャを始める
-              </button>
-              {topics === 0 ? <p className="text-center text-xs text-text-dim">話題が1件以上集まると始められます</p> : null}
-            </>
-          )}
-          {error ? (
-            <p role="alert" className="text-center text-sm font-bold text-danger">
-              {error}
-            </p>
-          ) : null}
+      {/* Fixed so the counts and the start button are always in reach on a phone. On a
+          wide screen it heads the right column instead, clear of the URL field. */}
+      <BottomBar className="lg:static lg:z-auto lg:col-start-2 lg:row-start-1 lg:rounded-card lg:border lg:bg-ink-raised/60 lg:p-5 lg:backdrop-blur-none">
+        <div className="flex items-baseline justify-center gap-x-5" aria-live="polite">
+          <p className="flex items-baseline gap-1.5">
+            <motion.span
+              key={topics}
+              initial={reduce ? false : { scale: 1.35, color: "#f2c46d" }}
+              animate={{ scale: 1, color: "#eef0f7" }}
+              transition={{ type: "spring", stiffness: 300, damping: 16 }}
+              className="inline-block font-display text-[2rem] leading-none"
+            >
+              {topics}
+            </motion.span>
+            <span className="font-black">件の話題</span>
+          </p>
+          <p className="text-sm text-text-dim">
+            参加 <span className="font-bold text-text tabular-nums">{guests}</span> 人
+            <span className="sr-only">（ホストを除く）</span>
+          </p>
         </div>
-      </div>
+        {confirming ? (
+          <>
+            <p className="text-center text-sm font-bold">締め切ると、もう投稿できなくなります。始めますか？</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" className="btn-quiet" onClick={() => setConfirming(false)} disabled={busy}>
+                もう少し待つ
+              </button>
+              <button type="button" className="btn-primary" onClick={start} disabled={busy}>
+                {busy ? "準備しています…" : "始める"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="btn-primary min-h-14 text-[1.05rem]"
+              onClick={() => setConfirming(true)}
+              disabled={topics === 0}
+            >
+              締め切ってめくり始める
+            </button>
+            {topics === 0 ? <p className="text-center text-xs text-text-dim">話題が1件以上集まると始められます</p> : null}
+          </>
+        )}
+        {error ? (
+          <p role="alert" className="text-center text-sm font-bold text-danger">
+            {error}
+          </p>
+        ) : null}
+      </BottomBar>
     </div>
   );
+}
+
+/** Draws once more if the network dropped the request; `expectedOrder` keeps that from drawing twice. */
+async function postDraw(code: string, token: string, expectedOrder: number): Promise<DrawResult> {
+  const send = () => api<DrawResult>(`/api/rooms/${code}/draw`, { body: { expectedOrder }, token });
+  try {
+    return await send();
+  } catch (e) {
+    if (!(e instanceof ApiError) || e.status !== 0) throw e;
+    await sleep(700);
+    return send();
+  }
 }
 
 function Drawing({
@@ -335,62 +385,93 @@ function Drawing({
   setView,
   refresh,
   mutate,
-  ended,
-  onEnded,
-  onShowResults,
 }: {
   view: RoomView;
   token: string;
   setView: (v: RoomView) => void;
   refresh: () => Promise<void>;
   mutate: Mutate;
-  ended: boolean;
-  onEnded: () => void;
-  onShowResults: () => Promise<void>;
 }) {
   const [confirmEnd, setConfirmEnd] = useState(false);
-  const [opening, setOpening] = useState(false);
-  const [endError, setEndError] = useState<string | null>(null);
+  // Ending or signalling the reveal; stays on until the list arrives.
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const last = view.drawn.at(-1);
   const { room } = view;
+  const ended = room.status === "ended";
   const drawsLeft =
     room.endMode === "count" && room.drawLimit ? Math.max(room.drawLimit - room.drawCount, 0) : null;
   const left = drawsLeft !== null ? Math.min(view.counts.remaining, drawsLeft) : view.counts.remaining;
 
   const draw = useCallback(
-    (): Promise<DrawnTopic> =>
-      mutate(async () => {
-        const res = await api<DrawResult>(`/api/rooms/${room.code}/draw`, { method: "POST", token });
-        if (res.ended) onEnded();
-        setView({
-          ...view,
-          room: { ...room, drawCount: res.card.order },
-          counts: { ...view.counts, remaining: res.remaining },
-          drawn: [...view.drawn, res.card],
+    async (): Promise<DrawnTopic> => {
+      try {
+        return await mutate(async () => {
+          const res = await postDraw(room.code, token, room.drawCount + 1);
+          const known = view.drawn.some((c) => c.id === res.card.id);
+          setView({
+            ...view,
+            room: {
+              ...room,
+              drawCount: Math.max(room.drawCount, res.card.order),
+              status: res.ended ? "ended" : room.status,
+            },
+            counts: { ...view.counts, remaining: res.remaining },
+            drawn: known ? view.drawn : [...view.drawn, res.card],
+            revealAt: res.revealAt,
+          });
+          return { text: res.card.text, order: res.card.order, rare: res.card.rare };
         });
-        return { text: res.card.text, order: res.card.order };
-      }),
-    [room, token, view, setView, onEnded, mutate],
+      } catch (e) {
+        // Another host device drew meanwhile: show the room as it is now.
+        if (e instanceof ApiError && e.status === 409) void refresh();
+        throw e;
+      }
+    },
+    [room, token, view, setView, mutate, refresh],
   );
 
-  async function end() {
-    setEndError(null);
+  async function run(path: "end" | "reveal") {
+    setBusy(true);
+    setError(null);
     try {
-      await mutate(() => api(`/api/rooms/${room.code}/end`, { method: "POST", token }));
+      const res = await mutate(() =>
+        path === "end"
+          ? api<{ revealAt: string | null }>(`/api/rooms/${room.code}/end`, { body: { reveal: true }, token })
+          : api<{ revealAt: string | null }>(`/api/rooms/${room.code}/reveal`, { method: "POST", token }),
+      );
+      // Start the countdown from the answer itself, so it runs even if the refresh fails.
+      setView({ ...view, room: { ...room, status: "ended" }, revealAt: res.revealAt });
+      // The countdown takes over from here; the list replaces this screen when it opens.
       await refresh();
     } catch (e) {
-      setEndError(e instanceof Error ? e.message : "終了できませんでした");
+      setError(errorText(e, path === "end" ? "終了できませんでした" : "合図を送れませんでした"));
+      setBusy(false);
     }
   }
 
+  const why =
+    view.counts.remaining === 0
+      ? "これが最後の1枚です"
+      : drawsLeft === 0
+        ? "決めた回数をめくりました"
+        : "ここで終わりにしました";
+
   return (
-    <div className="flex flex-col items-center">
+    // A phone lying sideways has room for the card and its controls only: the
+    // screen does not scroll (the lamp behind the card would let it), the end
+    // button sits in the corner and the confirmation beside the card.
+    <div
+      className={`flex flex-col items-center short-landscape:-my-4 short-landscape:h-svh short-landscape:justify-center short-landscape:overflow-y-clip ${
+        confirmEnd && !ended ? "pb-44 short-landscape:pb-0" : ""
+      }`}
+    >
       <p className="mb-6 text-center text-sm text-text-dim tabular-nums short-landscape:sr-only">
         {ended
-          ? `${room.drawCount}枚引きました`
+          ? `${room.drawCount}枚めくりました`
           : drawsLeft !== null
-            ? `あと${left}回引けます`
-            : `${view.counts.topics}件の話題から引いています`}
+            ? `あと${left}回めくれます`
+            : `${view.counts.topics}件の話題からめくっています`}
       </p>
       <CardStage
         theme={ROOM_THEME}
@@ -398,86 +479,247 @@ function Drawing({
         remaining={left}
         onDraw={draw}
         canDraw={!ended}
-        initial={last ? { text: last.text, order: last.order } : null}
+        initial={last ? { text: last.text, order: last.order, rare: last.rare } : null}
         blockedNote={
           <div className="flex w-full flex-col items-center gap-3 text-center">
-            <p className="font-bold">これが最後の1枚です</p>
+            <p className="font-bold">{why}</p>
             <p className="jp-wrap text-sm text-text-dim">
-              <Phrase text="参加者のスマホには、もう全部の話題が届いています。" />
+              <Phrase text="合図をすると、みんなのスマホで一覧が一斉に開きます。" />
             </p>
-            <button
-              type="button"
-              className="btn-primary w-full"
-              disabled={opening}
-              onClick={async () => {
-                setOpening(true);
-                await onShowResults();
-                setOpening(false);
-              }}
-            >
-              {opening ? "読み込んでいます…" : "結果を見る"}
+            <button type="button" className="btn-primary w-full" disabled={busy} onClick={() => run("reveal")}>
+              {busy ? "合図を送っています…" : "せーので公開"}
             </button>
+            {error ? (
+              <p role="alert" className="text-sm font-bold text-danger">
+                {error}
+              </p>
+            ) : null}
           </div>
         }
       />
 
-      {!ended ? (
-        <div className="mt-4 w-full max-w-xs text-center">
-          {confirmEnd ? (
-            <div className="grid gap-3 rounded-card border border-line p-4">
-              <p className="text-sm font-bold">ここで終わりにして、全員に一覧を公開しますか？</p>
-              <div className="flex justify-center gap-2">
-                <button type="button" className="btn-ghost min-h-11 text-sm" onClick={() => setConfirmEnd(false)}>
-                  続ける
-                </button>
-                <button type="button" className="btn-quiet min-h-11 text-sm" onClick={end}>
-                  終了して公開
-                </button>
-              </div>
-              {endError ? (
-                <p role="alert" className="text-sm text-danger">
-                  {endError}
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <button type="button" className="btn-ghost min-h-11 text-sm" onClick={() => setConfirmEnd(true)}>
-              ここでガチャを終了する
-            </button>
-          )}
+      {!ended && !confirmEnd ? (
+        <div className="mt-4 w-full max-w-xs text-center short-landscape:fixed short-landscape:right-[max(0.5rem,env(safe-area-inset-right))] short-landscape:bottom-[max(0.25rem,env(safe-area-inset-bottom))] short-landscape:w-auto">
+          <button type="button" className="btn-ghost min-h-11 text-sm" onClick={() => setConfirmEnd(true)}>
+            ここで終わりにする
+          </button>
         </div>
       ) : null}
 
-      <div className="mt-8">
+      <div className="mt-8 short-landscape:hidden">
         <HostLink code={room.code} token={token} />
       </div>
+
+      {confirmEnd && !ended ? (
+        <BottomBar className="short-landscape:left-1/2 short-landscape:rounded-tl-card short-landscape:border-l">
+          <p className="text-center text-sm font-bold">ここで終わりにして、せーので一覧を公開しますか？</p>
+          <div className="grid grid-cols-[auto_1fr] gap-2">
+            <button type="button" className="btn-quiet" onClick={() => setConfirmEnd(false)} disabled={busy}>
+              続ける
+            </button>
+            <button type="button" className="btn-primary px-4" onClick={() => run("end")} disabled={busy}>
+              {busy ? "合図を送っています…" : "終了してせーので公開"}
+            </button>
+          </div>
+          {error ? (
+            <p role="alert" className="text-center text-sm font-bold text-danger">
+              {error}
+            </p>
+          ) : null}
+        </BottomBar>
+      ) : null}
     </div>
   );
 }
 
-function Ended({ view }: { view: RoomView }) {
+type AnswerMode = "choose" | "guess" | "list";
+
+function Results({
+  view,
+  token,
+  refresh,
+  mutate,
+}: {
+  view: RoomView;
+  token: string;
+  refresh: () => Promise<void>;
+  mutate: Mutate;
+}) {
+  const items = view.reveal ?? [];
+  const total = items.length;
+  const shown = view.room.authorsShown;
+  const named = view.room.nameMode === "named" && total > 0;
+  // A reload in the middle of 答え合わせ picks up at the next hidden author.
+  const [mode, setMode] = useState<AnswerMode>(() =>
+    !named || shown >= total ? "list" : shown === 0 ? "choose" : "guess",
+  );
+  const [cursor, setCursor] = useState(() => Math.min(shown, Math.max(total - 1, 0)));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function showUpTo(upTo: number) {
+    setBusy(true);
+    setError(null);
+    try {
+      await mutate(() => api(`/api/rooms/${view.room.code}/answers`, { body: { upTo }, token }));
+      await refresh();
+      if (upTo >= total) setMode("list");
+    } catch (e) {
+      setError(errorText(e, "うまくいきませんでした"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const errorLine = error ? (
+    <p role="alert" className="text-center text-sm font-bold text-danger">
+      {error}
+    </p>
+  ) : null;
+
   return (
     <div className="mx-auto w-full max-w-xl">
-      <h1 className="font-display text-[clamp(1.7rem,7vw,2.3rem)] leading-tight">ガチャ終了！</h1>
+      <h1 className="font-display text-[clamp(1.7rem,7vw,2.3rem)] leading-tight">ぜんぶオープン！</h1>
       <p className="jp-wrap mt-2 text-text-dim">
         <Phrase text="集まった話題を全部公開しました。参加者のスマホにも同じ一覧が表示されています。" />
       </p>
-      <div className="mt-10">
-        <RevealList
-          items={view.reveal ?? []}
-          mine={view.myTopics.map((t) => t.id)}
-          theme={ROOM_THEME}
-          named={view.room.nameMode === "named"}
+
+      {mode === "choose" ? (
+        <section className="mt-8 grid gap-3 rounded-card border border-lamp/40 bg-lamp/5 p-5" aria-labelledby="answers-heading">
+          <h2 id="answers-heading" className="font-black">
+            誰が書いたかは、まだ秘密です
+          </h2>
+          <p className="text-sm text-text-dim">みんなで当ててから名前を出すか、すぐに全部見せるかを選べます。</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                setCursor(Math.min(shown, total - 1));
+                setMode("guess");
+              }}
+            >
+              誰が書いたか当てる
+            </button>
+            <button type="button" className="btn-quiet" onClick={() => showUpTo(total)} disabled={busy}>
+              名前を全部見せる
+            </button>
+          </div>
+          {errorLine}
+        </section>
+      ) : null}
+
+      {mode === "guess" ? (
+        <Guess
+          items={items}
+          cursor={cursor}
+          shown={shown}
+          busy={busy}
+          onAnswer={() => showUpTo(cursor + 1)}
+          onNext={() => (cursor + 1 < total ? setCursor(cursor + 1) : setMode("list"))}
+          onShowAll={() => showUpTo(total)}
+          error={errorLine}
         />
-      </div>
-      <div className="mt-12 flex flex-wrap gap-3">
-        <Link href="/room/new" className="btn-primary">
-          もう1回ルームを作る
-        </Link>
-        <Link href="/" className="btn-quiet">
-          トップへ
-        </Link>
-      </div>
+      ) : (
+        <div className="mt-10">
+          {/* Everyone at the table sees this screen: marking the host's own topics
+              would give away who wrote them, unless every name is out already. */}
+          <RevealList
+            items={items}
+            mine={named && shown >= total ? view.myTopics.map((t) => t.id) : []}
+            theme={ROOM_THEME}
+            named={named}
+          />
+        </div>
+      )}
+
+      {mode === "list" ? (
+        <>
+          <div className="mt-12 grid gap-3 sm:flex sm:flex-wrap">
+            <ShareListButton items={items} />
+            <MakeDeckButton items={items} />
+          </div>
+          <p className="mt-2 text-sm text-text-dim">デッキには名前を入れません。作るボタンを押すまで保存されません。</p>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link href="/room/new" className="btn-primary">
+              もう1回ルームを作る
+            </Link>
+            <Link href="/" className="btn-quiet">
+              トップへ
+            </Link>
+          </div>
+        </>
+      ) : null}
     </div>
+  );
+}
+
+/** 答え合わせ on the host's phone: one topic at a time on its card, everyone guesses, then 答えを見る. */
+function Guess({
+  items,
+  cursor,
+  shown,
+  busy,
+  onAnswer,
+  onNext,
+  onShowAll,
+  error,
+}: {
+  items: RevealItem[];
+  cursor: number;
+  shown: number;
+  busy: boolean;
+  onAnswer: () => void;
+  onNext: () => void;
+  onShowAll: () => void;
+  error: React.ReactNode;
+}) {
+  const reduce = useReducedMotion();
+  const item = items[cursor];
+  const revealed = cursor < shown;
+  if (!item) return null;
+  return (
+    <section className="mt-8 grid justify-items-center gap-5 text-center" aria-labelledby="guess-heading">
+      <h2 id="guess-heading" className="text-sm font-bold text-text-dim tabular-nums">
+        誰が書いたか当てよう（{cursor + 1} / {items.length}）
+      </h2>
+      <motion.div
+        key={item.id}
+        initial={reduce ? false : { opacity: 0, y: 12, rotate: -2 }}
+        animate={{ opacity: 1, y: 0, rotate: 0 }}
+        className="relative aspect-[5/7] w-[min(62vw,15rem)] rounded-card shadow-[0_24px_48px_-20px_rgb(0_0_0/0.85)] [@media(max-height:719.98px)]:w-[min(50vw,12rem)]"
+      >
+        <CardFront theme={ROOM_THEME} text={item.text} deckTitle="みんなの話題" order={item.order} rare={item.rare} />
+      </motion.div>
+      <div aria-live="polite">
+        <p className="text-sm text-text-dim">書いたのは</p>
+        <motion.p
+          key={revealed ? "name" : "hidden"}
+          initial={reduce || !revealed ? false : { scale: 1.4, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 16 }}
+          className={`font-display text-[clamp(1.8rem,9vw,2.6rem)] leading-tight ${revealed ? "text-lamp" : ""}`}
+        >
+          {revealed ? item.author : "？"}
+        </motion.p>
+      </div>
+      <div className="grid w-full max-w-sm gap-2">
+        {revealed ? (
+          <button type="button" className="btn-primary min-h-14 text-[1.05rem]" onClick={onNext}>
+            {cursor + 1 < items.length ? "次へ" : "一覧を見る"}
+          </button>
+        ) : (
+          <button type="button" className="btn-primary min-h-14 text-[1.05rem]" onClick={onAnswer} disabled={busy}>
+            答えを見る
+          </button>
+        )}
+        {shown < items.length ? (
+          <button type="button" className="btn-ghost text-sm" onClick={onShowAll} disabled={busy}>
+            残りを全部見せる
+          </button>
+        ) : null}
+        {error}
+      </div>
+    </section>
   );
 }

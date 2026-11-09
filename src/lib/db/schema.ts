@@ -1,6 +1,6 @@
 /**
- * Idempotent schema. Runs on first connection for both PGlite (local) and
- * PostgreSQL (production), so the two always share the same tables.
+ * The MVP schema, kept as migration 1 (see migrations.ts). It is idempotent.
+ * Do not edit it: later changes are new entries in MIGRATIONS.
  */
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS rooms (

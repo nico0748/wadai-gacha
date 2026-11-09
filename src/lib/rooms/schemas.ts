@@ -29,7 +29,7 @@ export const createRoomSchema = z
   })
   .superRefine((v, ctx) => {
     if (v.endMode === "count" && v.drawLimit == null) {
-      ctx.addIssue({ code: "custom", path: ["drawLimit"], message: "引く回数を指定してください" });
+      ctx.addIssue({ code: "custom", path: ["drawLimit"], message: "めくる回数を指定してください" });
     }
   });
 
@@ -37,3 +37,21 @@ export type CreateRoomInput = z.input<typeof createRoomSchema>;
 
 export const joinRoomSchema = z.object({ nickname: z.string().optional() });
 export const addTopicSchema = z.object({ text: topicTextSchema });
+
+/** The host says which draw it means, so a retried request draws only once. */
+export const drawSchema = z.object({
+  expectedOrder: z.number().int().min(1).optional(),
+});
+
+export const endRoomSchema = z.object({
+  /** End and start the せーの countdown in one step. */
+  reveal: z.boolean().optional(),
+});
+
+export const answersSchema = z.object({
+  upTo: z
+    .number({ error: "どこまで見せるかを指定してください" })
+    .int("どこまで見せるかは整数で指定してください")
+    .min(0)
+    .max(LIMITS.topicsPerRoom),
+});

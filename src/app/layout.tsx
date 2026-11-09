@@ -19,7 +19,7 @@ const zen = Zen_Maru_Gothic({
 });
 
 const NAME = "めくトーク";
-const DESCRIPTION = "その場のみんなで話題を出し合って、カードのガチャで引く。飲み会や雑談のお供に。";
+const DESCRIPTION = "みんなで話題を出し合って、1枚ずつめくって話す。飲み会や雑談のお供に。";
 
 export const metadata: Metadata = {
   // Share images need an absolute URL. On Vercel, Next fills this in by itself.
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#16122b",
+  themeColor: "#121726",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

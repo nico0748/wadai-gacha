@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { handle, json, readJson } from "@/lib/api";
 import { deleteUserDeck, getUserDeckForEdit, updateUserDeck } from "@/lib/decks/service";
+import { clientIp, limitBy } from "@/lib/rateLimit";
 
 type Ctx = { params: Promise<{ shareId: string }> };
 
@@ -14,12 +15,16 @@ export const GET = handle(async (req: Request, { params }: Ctx) => {
 
 export const PUT = handle(async (req: Request, { params }: Ctx) => {
   const { shareId } = await params;
-  await updateUserDeck(await getDb(), shareId, editKey(req), await readJson(req));
+  const db = await getDb();
+  await limitBy(db, "deckEdit", clientIp(req));
+  await updateUserDeck(db, shareId, editKey(req), await readJson(req));
   return json({ ok: true });
 });
 
 export const DELETE = handle(async (req: Request, { params }: Ctx) => {
   const { shareId } = await params;
-  await deleteUserDeck(await getDb(), shareId, editKey(req));
+  const db = await getDb();
+  await limitBy(db, "deckEdit", clientIp(req));
+  await deleteUserDeck(db, shareId, editKey(req));
   return json({ ok: true });
 });

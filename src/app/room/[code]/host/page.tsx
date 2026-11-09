@@ -9,7 +9,7 @@ export default function HostPage({ params }: PageProps<"/room/[code]/host">) {
   return (
     <>
       <SiteHeader hideInLandscape />
-      <main className="mx-auto w-full max-w-5xl flex-1 overflow-clip px-4 pt-4 pb-16 sm:px-6 short-landscape:py-4">
+      <main className="mx-auto w-full max-w-5xl flex-1 overflow-x-clip px-4 pt-4 pb-16 sm:px-6 short-landscape:py-4">
         <Suspense fallback={<p className="py-20 text-center text-text-dim">読み込んでいます…</p>}>
           <Host params={params} />
         </Suspense>
