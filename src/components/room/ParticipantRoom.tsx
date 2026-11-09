@@ -30,7 +30,7 @@ export function ParticipantRoom({ code }: { code: string }) {
           return 4500 + jitterFor(v.me.id, 1000);
         // Often enough to catch the host's せーの with the countdown still running.
         case "held":
-          return due ? 500 : 1500;
+          return due ? 200 : 1500;
         case "answers":
           return v.room.authorsShown > 0 ? 1500 : 2500;
         case "done":
@@ -116,9 +116,9 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
 
   // Loads once; then only someone without a session (another browser, a
   // late arrival) watching a held list or a named room's 答え合わせ keeps
-  // polling, to get the countdown and the names. Any answer from the server
-  // other than the room (gone, rate limited) stops it: missed lookups count
-  // against the whole network's join limit.
+  // polling, to get the countdown and the names. A missing room stops it
+  // (missed lookups count against the whole network's limit); a busy server
+  // or a bad connection only slows it down.
   const data = info?.data ?? null;
   const heldUntil = data && data.status === "ended" && !data.reveal ? data.revealAt : null;
   const msLeft = useMsUntil(heldUntil, info?.offset ?? 0);
@@ -126,14 +126,23 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
   const answering = Boolean(
     data?.reveal && data.nameMode === "named" && data.reveal.some((r) => r.author === null),
   );
-  const refused = loadError !== null && loadError.status !== 0;
+  const gone = loadError?.status === 404;
   usePolling(
     loadInfo,
-    heldUntil ? (due ? 700 : 2500) : 5000,
-    data ? !refused && (Boolean(heldUntil) || answering) : !loadError,
+    loadError ? 5000 : heldUntil ? (due ? 300 : 2500) : 5000,
+    !gone && (!data || Boolean(heldUntil) || answering),
   );
 
-  if (loadError && (!data || loadError.status === 404)) return <RoomNotFound message={loadError.message} />;
+  if (gone) return <RoomNotFound message={loadError.message} />;
+  if (!data && loadError) {
+    return (
+      <Notice title="つながりにくくなっています" body={`${loadError.message}（自動でつなぎ直します）`}>
+        <Link href="/" className="btn-quiet">
+          トップへ
+        </Link>
+      </Notice>
+    );
+  }
   if (!data || !info) return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
   if (data.status === "ended") {
     if (!data.reveal) {

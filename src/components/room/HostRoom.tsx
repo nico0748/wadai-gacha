@@ -34,8 +34,9 @@ function hostPollMs(view: RoomView | null, due: boolean): number | null {
       return 2000;
     case "drawing":
       return 8000;
+    // Cheap (?v=) and lets a host whose last refresh failed catch up.
     case "held":
-      return due ? 500 : null;
+      return due ? 200 : 3000;
     default:
       return null;
   }
@@ -376,35 +377,44 @@ function Drawing({
   const left = drawsLeft !== null ? Math.min(view.counts.remaining, drawsLeft) : view.counts.remaining;
 
   const draw = useCallback(
-    (): Promise<DrawnTopic> =>
-      mutate(async () => {
-        const res = await postDraw(room.code, token, room.drawCount + 1);
-        const known = view.drawn.some((c) => c.id === res.card.id);
-        setView({
-          ...view,
-          room: {
-            ...room,
-            drawCount: Math.max(room.drawCount, res.card.order),
-            status: res.ended ? "ended" : room.status,
-          },
-          counts: { ...view.counts, remaining: res.remaining },
-          drawn: known ? view.drawn : [...view.drawn, res.card],
-          revealAt: res.revealAt,
+    async (): Promise<DrawnTopic> => {
+      try {
+        return await mutate(async () => {
+          const res = await postDraw(room.code, token, room.drawCount + 1);
+          const known = view.drawn.some((c) => c.id === res.card.id);
+          setView({
+            ...view,
+            room: {
+              ...room,
+              drawCount: Math.max(room.drawCount, res.card.order),
+              status: res.ended ? "ended" : room.status,
+            },
+            counts: { ...view.counts, remaining: res.remaining },
+            drawn: known ? view.drawn : [...view.drawn, res.card],
+            revealAt: res.revealAt,
+          });
+          return { text: res.card.text, order: res.card.order, rare: res.card.rare };
         });
-        return { text: res.card.text, order: res.card.order, rare: res.card.rare };
-      }),
-    [room, token, view, setView, mutate],
+      } catch (e) {
+        // Another host device drew meanwhile: show the room as it is now.
+        if (e instanceof ApiError && e.status === 409) void refresh();
+        throw e;
+      }
+    },
+    [room, token, view, setView, mutate, refresh],
   );
 
   async function run(path: "end" | "reveal") {
     setBusy(true);
     setError(null);
     try {
-      await mutate(() =>
+      const res = await mutate(() =>
         path === "end"
-          ? api(`/api/rooms/${room.code}/end`, { body: { reveal: true }, token })
-          : api(`/api/rooms/${room.code}/reveal`, { method: "POST", token }),
+          ? api<{ revealAt: string | null }>(`/api/rooms/${room.code}/end`, { body: { reveal: true }, token })
+          : api<{ revealAt: string | null }>(`/api/rooms/${room.code}/reveal`, { method: "POST", token }),
       );
+      // Start the countdown from the answer itself, so it runs even if the refresh fails.
+      setView({ ...view, room: { ...room, status: "ended" }, revealAt: res.revealAt });
       // The countdown takes over from here; the list replaces this screen when it opens.
       await refresh();
     } catch (e) {
