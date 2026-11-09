@@ -29,6 +29,9 @@ export const deckInputSchema = z.object({
   theme: z.enum(DECK_THEME_KEYS as [DeckTheme, ...DeckTheme[]], { error: "カードの色を選んでください" }),
   cards: z
     .array(z.string(), { error: "カードを1枚以上入力してください" })
+    // Checked before any entry is read, so a huge array is rejected cheaply.
+    // Blank entries are dropped below, so allow some slack for them.
+    .max(LIMITS.deckCardsMax * 2, `カードは${LIMITS.deckCardsMax}枚までです`)
     .transform((cards) => cards.map(oneLine).filter((c) => c.length > 0))
     .pipe(
       z
