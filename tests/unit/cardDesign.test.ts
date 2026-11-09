@@ -172,11 +172,9 @@ describe("band colours", () => {
     }
   });
 
-  it("keeps the light decks bright, with ink text", () => {
-    for (const key of ["lemon", "rose"] as const) {
-      const t = DECK_THEMES[key];
-      expect(bandColors(t)).toEqual({ background: `linear-gradient(110deg, ${t.from}, ${t.to})`, color: t.ink });
-    }
+  it("keeps a light deck's own colours, with ink text, when the ink reads on both ends", () => {
+    const light = { from: "#f6d365", to: "#fda085", ink: "#3a2306" };
+    expect(bandColors(light)).toEqual({ background: `linear-gradient(110deg, ${light.from}, ${light.to})`, color: light.ink });
   });
 
   it("deepens a colour for white text without changing its hue", () => {
