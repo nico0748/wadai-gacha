@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { api, ApiError } from "@/lib/client/api";
 import { forgetOwnedDeck, saveOwnedDeck } from "@/lib/client/storage";
 import type { Deck, DeckInput } from "@/lib/decks/types";
+import { LIMITS } from "@/lib/limits";
+import { DECK_DRAFT_KEY, parseDeckDraft } from "@/lib/rooms/results";
 import { CopyField } from "./CopyField";
 import { DeckEditor } from "./DeckEditor";
 
@@ -14,10 +16,29 @@ function useOrigin() {
   return useSyncExternalStore(noop, () => window.location.origin, () => "");
 }
 
+// A room's topics handed over by "この話題でデッキを作る". Taken out of
+// sessionStorage on first read, so a reload starts empty; kept here until
+// the deck is created, like any unfinished form.
+let roomDraft: string | null = null;
+function takeRoomDraft(): string | null {
+  try {
+    const raw = window.sessionStorage.getItem(DECK_DRAFT_KEY);
+    if (raw !== null) {
+      roomDraft = raw;
+      window.sessionStorage.removeItem(DECK_DRAFT_KEY);
+    }
+  } catch {
+    /* storage blocked: no draft */
+  }
+  return roomDraft;
+}
+
 export function NewUserDeck() {
   const router = useRouter();
   const created = useRef<string | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const draftRaw = useSyncExternalStore(noop, takeRoomDraft, () => null);
+  const draft = useMemo(() => parseDeckDraft(draftRaw), [draftRaw]);
 
   // Next keeps this page alive in the background after we navigate to the new
   // deck. Once a deck was created, start from an empty form when the page is
@@ -33,18 +54,30 @@ export function NewUserDeck() {
   );
 
   return (
-    <DeckEditor
-      key={formKey}
-      submitLabel="デッキを作る"
-      onSubmit={async (input) => {
-        if (!created.current) {
-          const { shareId, editKey } = await api<{ shareId: string; editKey: string }>("/api/decks", { body: input });
-          saveOwnedDeck({ shareId, editKey, title: input.title.trim(), theme: input.theme });
-          created.current = `/d/${shareId}/edit/${editKey}?created=1`;
-        }
-        router.push(created.current);
-      }}
-    />
+    <>
+      {draft ? (
+        <p role="status" className="mb-8 rounded-card border border-accent/50 bg-accent/5 px-4 py-3 text-sm">
+          ルームで集まった話題を入れました（名前は入っていません）。「デッキを作る」を押すまで保存されません。
+          {draft.omitted
+            ? `話題が多いので、最初の${LIMITS.deckCardsMax}件だけ入れています（${draft.omitted}件は入っていません）。`
+            : null}
+        </p>
+      ) : null}
+      <DeckEditor
+        key={`${formKey}:${draftRaw === null ? "blank" : "room"}`}
+        initial={draft ? { title: draft.title, cards: draft.cards } : undefined}
+        submitLabel="デッキを作る"
+        onSubmit={async (input) => {
+          if (!created.current) {
+            const { shareId, editKey } = await api<{ shareId: string; editKey: string }>("/api/decks", { body: input });
+            saveOwnedDeck({ shareId, editKey, title: input.title.trim(), theme: input.theme });
+            created.current = `/d/${shareId}/edit/${editKey}?created=1`;
+            roomDraft = null;
+          }
+          router.push(created.current);
+        }}
+      />
+    </>
   );
 }
 
