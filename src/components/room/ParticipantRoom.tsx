@@ -141,7 +141,7 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
     <div className="mx-auto w-full max-w-md pt-4">
       <div className="mx-auto mb-8 w-28 -rotate-6">
         <div className="relative aspect-[5/7] rounded-card shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)]">
-          <CardBack theme="candy" />
+          <CardBack theme="yoru" />
         </div>
       </div>
       <h1 className="text-center font-display text-[1.7rem] leading-tight">めくトークに参加</h1>
@@ -195,7 +195,7 @@ function Collecting({ view, token, refresh }: { view: RoomView; token: string; r
       <p className="jp-wrap mt-2 text-text-dim">
         <Phrase text="ほかの人の投稿は、ガチャが終わるまで見えません。" />
         <br />
-        今は<span className="mx-1 font-bold text-lemon tabular-nums">{view.counts.topics}件</span>集まっています。
+        今は<span className="mx-1 font-bold text-lamp tabular-nums">{view.counts.topics}件</span>集まっています。
       </p>
       <div className="mt-4">
         <RoomRules room={view.room} />
@@ -221,7 +221,7 @@ function Waiting({ view }: { view: RoomView }) {
             transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.25, ease: "easeInOut" }}
             style={{ rotate: i * 6 - 6 }}
           >
-            <CardBack theme="candy" />
+            <CardBack theme="yoru" />
           </motion.div>
         ))}
       </div>
@@ -265,7 +265,7 @@ function Reveal({ view }: { view: RoomView }) {
       >
         <h1 className="font-display text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ガチャ終了！</h1>
         <p className="mt-2 text-text-dim">
-          みんなが出した<span className="mx-1 font-bold text-lemon tabular-nums">{total}件</span>の話題を、全部公開します。
+          みんなが出した<span className="mx-1 font-bold text-lamp tabular-nums">{total}件</span>の話題を、全部公開します。
         </p>
       </motion.div>
       <div className="mt-10">

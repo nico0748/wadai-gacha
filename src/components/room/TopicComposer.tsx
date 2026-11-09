@@ -107,7 +107,7 @@ export function TopicComposer({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={reduce ? { opacity: 0 } : { opacity: 0, x: 40 }}
                   className={`flex items-center gap-3 rounded-[0.8rem] border bg-ink-raised px-4 py-2.5 ${
-                    justAdded === t.id ? "border-mint/60" : "border-line/70"
+                    justAdded === t.id ? "border-accent/60" : "border-line/70"
                   }`}
                 >
                   <span className="min-w-0 flex-1 break-words">{t.text}</span>

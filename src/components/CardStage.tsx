@@ -17,6 +17,8 @@ import { CardBack, CardFront } from "./GachaCard";
 export interface DrawnTopic {
   text: string;
   order?: number | null;
+  /** A rare draw (see src/lib/rarity.ts) gets the gold treatment. */
+  rare?: boolean;
 }
 
 interface ActiveCard {

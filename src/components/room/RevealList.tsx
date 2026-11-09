@@ -13,7 +13,7 @@ import { Phrase } from "../Phrase";
 export function RevealList({
   items,
   mine = [],
-  theme = "candy",
+  theme = "yoru",
   named = false,
 }: {
   items: RevealItem[];

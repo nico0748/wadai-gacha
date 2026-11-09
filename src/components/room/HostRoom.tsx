@@ -16,7 +16,7 @@ import { RevealList } from "./RevealList";
 import { TopicComposer } from "./TopicComposer";
 import { useRoom } from "./useRoom";
 
-const ROOM_THEME = "candy";
+const ROOM_THEME = "yoru";
 const noop = () => () => {};
 const readHashKey = () => new URLSearchParams(window.location.hash.slice(1)).get("k");
 
@@ -258,7 +258,7 @@ function Collecting({
             <p className="flex items-baseline justify-center gap-2 lg:justify-start">
               <motion.span
                 key={topics}
-                initial={reduce ? false : { scale: 1.3, color: "#ffd447" }}
+                initial={reduce ? false : { scale: 1.3, color: "#f2c46d" }}
                 animate={{ scale: 1, color: "#f3efff" }}
                 transition={{ type: "spring", stiffness: 300, damping: 16 }}
                 className="inline-block font-display text-[3.5rem] leading-none tabular-nums"

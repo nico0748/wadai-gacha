@@ -80,7 +80,7 @@ export default function Home() {
               ["カードを引いて話す", "ホストのスマホでめくって、出た話題でトーク。終わったら全員のスマホに一覧が届きます。"],
             ].map(([title, body], i) => (
               <li key={title} className="flex gap-5 border-b border-line/70 py-5 sm:border-t sm:border-b-0">
-                <span className="w-8 shrink-0 font-display text-[2.5rem] leading-none text-lemon tabular-nums" aria-hidden="true">
+                <span className="w-8 shrink-0 font-display text-[2.5rem] leading-none text-lamp tabular-nums" aria-hidden="true">
                   {i + 1}
                 </span>
                 <div>

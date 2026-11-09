@@ -1,5 +1,6 @@
 /** Card-back colourways. Each deck picks one; the key is stored in the DB. */
 export const DECK_THEMES = {
+  yoru: { name: "よる", from: "#8388af", to: "#495a79", ink: "#232c44" },
   candy: { name: "キャンディ", from: "#ff5c8a", to: "#a64bff", ink: "#3a0c2a" },
   mint: { name: "ミント", from: "#3fe0b2", to: "#2a8ef4", ink: "#062a2a" },
   lemon: { name: "レモン", from: "#ffd447", to: "#ff7a3d", ink: "#3a2306" },
@@ -16,5 +17,5 @@ export function isDeckTheme(value: string): value is DeckTheme {
 }
 
 export function themeOf(value: string) {
-  return DECK_THEMES[isDeckTheme(value) ? value : "candy"];
+  return DECK_THEMES[isDeckTheme(value) ? value : "yoru"];
 }

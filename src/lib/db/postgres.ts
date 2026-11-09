@@ -1,5 +1,5 @@
 import postgres from "postgres";
-import { SCHEMA_SQL } from "./schema";
+import { migrate } from "./migrations";
 import type { Db, Row } from "./types";
 
 type Sql = postgres.Sql | postgres.TransactionSql;
@@ -9,6 +9,9 @@ function wrap(sql: Sql, inTx: boolean): Db {
     async query<T extends Row>(text: string, params: unknown[] = []) {
       const rows = await sql.unsafe(text, params as postgres.ParameterOrJSON<never>[]);
       return rows as unknown as T[];
+    },
+    async exec(text: string) {
+      await sql.unsafe(text);
     },
     async transaction<T>(fn: (tx: Db) => Promise<T>) {
       if (inTx) return fn(wrap(sql, true));
@@ -20,6 +23,7 @@ function wrap(sql: Sql, inTx: boolean): Db {
 
 export async function createPostgresDb(url: string): Promise<Db> {
   const sql = postgres(url, { max: 5, idle_timeout: 20, prepare: false });
-  await sql.unsafe(SCHEMA_SQL);
-  return wrap(sql, false);
+  const db = wrap(sql, false);
+  await migrate(db);
+  return db;
 }

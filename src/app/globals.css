@@ -2,22 +2,26 @@
 
 /*
  * めくトーク — a card table at night.
- * Deep indigo felt under a single warm lamp; the cards carry the colour.
+ * Navy felt under a single warm lamp; the cards carry the colour. Accents
+ * come from the logo (lavender and navy).
  */
 @theme {
-  --color-ink: #16122b;
-  --color-ink-raised: #211b3f;
-  --color-ink-sunk: #100d21;
-  --color-line: #3a3263;
-  --color-paper: #fffaf0;
-  --color-paper-ink: #231a3a;
-  --color-text: #f3efff;
-  --color-text-dim: #aaa3cc;
-  --color-candy: #ff5c8a;
-  --color-candy-deep: #e23d6d;
-  --color-lemon: #ffd447;
-  --color-mint: #3fe0b2;
-  --color-danger: #ff7a7a;
+  --color-ink: #121726;
+  --color-ink-raised: #1c2337;
+  --color-ink-sunk: #0d111c;
+  --color-line: #5f6b8f;
+  --color-paper: #f4eee9;
+  --color-paper-ink: #2a3550;
+  --color-text: #eef0f7;
+  --color-text-dim: #a9b1c9;
+  /* The main button: the logo's lavender, pressed into its deeper tone. */
+  --color-primary: #b5b6ce;
+  --color-primary-deep: #8388af;
+  --color-primary-ink: #1e263a;
+  --color-accent: #a9acdb;
+  /* The lamp over the table: focus rings, counters and the moment a card turns. */
+  --color-lamp: #f2c46d;
+  --color-danger: #ff8a80;
 
   --font-display: var(--font-dela), "Hiragino Sans", sans-serif;
   --font-sans: var(--font-zen), "Hiragino Maru Gothic ProN", "Hiragino Sans", sans-serif;
@@ -42,7 +46,7 @@ body {
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
     radial-gradient(90% 55% at 50% 18%, rgb(255 214 140 / 0.11), transparent 70%),
-    radial-gradient(140% 100% at 50% 40%, transparent 55%, rgb(5 3 15 / 0.55)),
+    radial-gradient(140% 100% at 50% 40%, transparent 55%, rgb(3 5 12 / 0.55)),
     var(--color-ink);
   background-attachment: fixed;
   overflow-x: clip;
@@ -55,7 +59,7 @@ body {
 @layer base {
   /* In a layer so components can swap it for their own focus style. */
   :focus-visible {
-    outline: 3px solid var(--color-lemon);
+    outline: 3px solid var(--color-lamp);
     outline-offset: 3px;
   }
 }
@@ -90,7 +94,7 @@ p {
 }
 
 ::selection {
-  background: var(--color-candy);
+  background: var(--color-primary-deep);
   color: white;
 }
 
@@ -98,7 +102,7 @@ p {
   @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 text-[0.95rem] font-bold tracking-wide transition-[transform,background-color,box-shadow,opacity,border-color,color] duration-150 select-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40;
 }
 @utility btn-primary {
-  @apply btn bg-candy text-paper-ink shadow-[0_6px_0_var(--color-candy-deep)] hover:brightness-105 active:translate-y-[3px] active:shadow-[0_3px_0_var(--color-candy-deep)];
+  @apply btn bg-primary text-primary-ink shadow-[0_6px_0_var(--color-primary-deep)] hover:brightness-105 active:translate-y-[3px] active:shadow-[0_3px_0_var(--color-primary-deep)];
 }
 @utility btn-quiet {
   @apply btn border border-line bg-ink-raised text-text hover:border-text-dim;
@@ -107,7 +111,7 @@ p {
   @apply btn px-3 text-text-dim hover:text-text;
 }
 @utility field {
-  @apply w-full rounded-field border border-line bg-ink-sunk px-4 py-3 text-base text-text placeholder:text-text-dim/60 focus:border-lemon focus:outline-none;
+  @apply w-full rounded-field border border-line bg-ink-sunk px-4 py-3 text-base text-text placeholder:text-text-dim/60 focus:border-lamp focus:outline-none;
 }
 @utility label {
   @apply mb-2 block text-sm font-bold text-text-dim;

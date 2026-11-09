@@ -92,7 +92,7 @@ export function EditUserDeck({ shareId, editKey }: { shareId: string; editKey: s
   return (
     <div className="grid gap-12">
       <section
-        className={`grid gap-5 rounded-card border p-5 sm:p-6 ${created ? "border-mint/60 bg-mint/5" : "border-line/70 bg-ink-raised/50"}`}
+        className={`grid gap-5 rounded-card border p-5 sm:p-6 ${created ? "border-accent/60 bg-accent/5" : "border-line/70 bg-ink-raised/50"}`}
         aria-labelledby="share-heading"
       >
         <div>
@@ -117,7 +117,7 @@ export function EditUserDeck({ shareId, editKey }: { shareId: string; editKey: s
           内容を編集
         </h2>
         {saved ? (
-          <p role="status" className="mb-6 font-bold text-mint">
+          <p role="status" className="mb-6 font-bold text-accent">
             保存しました
           </p>
         ) : null}

@@ -59,7 +59,7 @@ function toSummary(row: DeckRow): DeckSummary {
     source: row.kind,
     title: row.title,
     description: row.description,
-    theme: isDeckTheme(row.theme) ? row.theme : "candy",
+    theme: isDeckTheme(row.theme) ? row.theme : "yoru",
     cardCount: row.card_count ?? 0,
   };
 }

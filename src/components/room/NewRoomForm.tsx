@@ -28,8 +28,8 @@ function Choice<T extends string>({
   const checked = current === value;
   return (
     <div
-      className={`rounded-[0.9rem] border transition-colors has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-lemon ${
-        checked ? "border-candy bg-candy/8" : "border-line bg-ink-raised/50 hover:border-text-dim"
+      className={`rounded-[0.9rem] border transition-colors has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-lamp ${
+        checked ? "border-primary bg-primary/8" : "border-line bg-ink-raised/50 hover:border-text-dim"
       }`}
     >
       <label className="flex cursor-pointer gap-3 p-4">
@@ -43,9 +43,9 @@ function Choice<T extends string>({
         />
         <span
           aria-hidden="true"
-          className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${checked ? "border-candy" : "border-line"}`}
+          className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${checked ? "border-primary" : "border-line"}`}
         >
-          {checked ? <span className="h-2.5 w-2.5 rounded-full bg-candy" /> : null}
+          {checked ? <span className="h-2.5 w-2.5 rounded-full bg-primary" /> : null}
         </span>
         <span className="flex-1">
           <span className="block font-bold">{title}</span>
