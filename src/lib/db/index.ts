@@ -28,7 +28,10 @@ async function open(): Promise<Db> {
     return createPostgresDb(url);
   }
   const { createPgliteDb } = await import("./pglite");
-  const dir = path.resolve(process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite"));
+  // The ignore comment keeps the build from tracing the whole project into the server bundle.
+  const dir = path.resolve(
+    /*turbopackIgnore: true*/ process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite"),
+  );
   await mkdir(dir, { recursive: true });
   return createPgliteDb(dir);
 }
