@@ -53,7 +53,7 @@ export default function Home() {
               }}
               aria-label={`${deck.title}デッキで引く`}
             >
-              <div className="relative aspect-[5/7] w-full shadow-[0_22px_40px_-16px_rgb(0_0_0/0.8)] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-translate-y-3 group-focus-visible:-translate-y-3">
+              <div className="relative aspect-[5/7] w-full rounded-card shadow-[0_22px_40px_-16px_rgb(0_0_0/0.8)] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-translate-y-3 group-focus-visible:-translate-y-3">
                 <CardBack theme={deck.theme} label={i === 1 ? deck.title : undefined} />
               </div>
             </Link>

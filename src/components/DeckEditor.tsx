@@ -169,7 +169,7 @@ export function DeckEditor({ initial, submitLabel, onSubmit, onDelete, deleteLab
 
 /** Both faces of the card as it will look on the table, using the first card as the sample. */
 function Preview({ theme, title, sample, stacked = false }: { theme: DeckTheme; title: string; sample?: string; stacked?: boolean }) {
-  const shadow = "shadow-[0_22px_40px_-16px_rgb(0_0_0/0.8)]";
+  const shadow = "rounded-card shadow-[0_22px_40px_-16px_rgb(0_0_0/0.8)]";
   return (
     <div>
       <span className="label">プレビュー</span>

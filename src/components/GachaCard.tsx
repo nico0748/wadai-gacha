@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { themeOf } from "@/lib/decks/themes";
-import { CapsuleMark } from "./Logo";
+import { BubbleMark } from "./Logo";
 import { Phrase } from "./Phrase";
 
 /**
@@ -15,9 +15,9 @@ function topicSize(text: string): string {
   return "7.6cqi";
 }
 
-/** Two-tone capsules, tiled. Drawn in white so the deck gradient shows through. */
-const CAPSULE_TILE = encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 26 26'><g transform='rotate(-30 13 13)'><path d='M7 10.5h6v5H7a2.5 2.5 0 0 1 0-5z' fill='white' fill-opacity='.34'/><path d='M13 10.5h6a2.5 2.5 0 0 1 0 5h-6z' fill='white' fill-opacity='.14'/></g></svg>`,
+/** Small speech bubbles, tiled. Drawn in white so the deck gradient shows through. */
+const BUBBLE_TILE = encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 26 26'><path transform='translate(8.04 8.38) scale(.31)' d='M16 4.5c7.46 0 13.5 4.66 13.5 10.4S23.46 25.3 16 25.3c-1.38 0-2.72-.16-3.98-.46L5.6 28.9l1.72-5.86C4.3 21.15 2.5 18.2 2.5 14.9 2.5 9.16 8.54 4.5 16 4.5z' fill='white' fill-opacity='.24'/></svg>`,
 );
 
 export function CardBack({ theme, label }: { theme: string; label?: string }) {
@@ -30,7 +30,7 @@ export function CardBack({ theme, label }: { theme: string; label?: string }) {
       <div
         className="absolute inset-0"
         style={{
-          backgroundImage: `url("data:image/svg+xml,${CAPSULE_TILE}"), url("data:image/svg+xml,${CAPSULE_TILE}")`,
+          backgroundImage: `url("data:image/svg+xml,${BUBBLE_TILE}"), url("data:image/svg+xml,${BUBBLE_TILE}")`,
           backgroundSize: "26px 26px",
           backgroundPosition: "0 0, 13px 13px",
         }}
@@ -41,7 +41,7 @@ export function CardBack({ theme, label }: { theme: string; label?: string }) {
           className="grid aspect-square w-[40cqi] place-items-center rounded-full bg-paper"
           style={{ boxShadow: `0 0 0 2px ${t.ink}26, 0 0 0 7px rgb(255 250 240 / 0.28), 0 10px 24px -10px ${t.ink}` }}
         >
-          <CapsuleMark top={t.from} className="h-[58%] w-[58%]" />
+          <BubbleMark color={t.to} className="h-[60%] w-[60%] translate-y-[4%]" />
         </div>
         {label ? (
           <span
@@ -104,16 +104,9 @@ export function CardFront({
           </p>
         </div>
 
-        {order ? (
-          <span
-            className="absolute right-[5.5cqi] bottom-[5cqi] flex rotate-180 flex-col items-center leading-none"
-            style={{ color: t.ink }}
-            aria-hidden="true"
-          >
-            <span className="text-[3.4cqi] font-black tracking-wider opacity-70">No.</span>
-            <span className="font-display text-[9cqi] tabular-nums">{order}</span>
-          </span>
-        ) : null}
+        <span className="absolute right-[5cqi] bottom-[4.5cqi] opacity-30" aria-hidden="true">
+          <BubbleMark color={t.to} className="h-[9cqi] w-[9cqi]" />
+        </span>
       </div>
     </div>
   );

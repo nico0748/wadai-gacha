@@ -23,7 +23,7 @@ export function DeckTile({
           <div className="absolute inset-0 translate-x-[7%] translate-y-[4%] rotate-[5deg] brightness-[0.72]">
             <CardBack theme={theme} />
           </div>
-          <div className="absolute inset-0 shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-translate-y-2 group-hover:-rotate-2">
+          <div className="absolute inset-0 rounded-card shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)] transition-transform duration-300 ease-[var(--ease-spring)] group-hover:-translate-y-2 group-hover:-rotate-2">
             <CardBack theme={theme} label={title} />
           </div>
         </div>

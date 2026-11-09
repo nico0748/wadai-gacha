@@ -140,11 +140,11 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
   return (
     <div className="mx-auto w-full max-w-md pt-4">
       <div className="mx-auto mb-8 w-28 -rotate-6">
-        <div className="relative aspect-[5/7] shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)]">
+        <div className="relative aspect-[5/7] rounded-card shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)]">
           <CardBack theme="candy" />
         </div>
       </div>
-      <h1 className="text-center font-display text-[1.7rem] leading-tight">話題ガチャに参加</h1>
+      <h1 className="text-center font-display text-[1.7rem] leading-tight">めくトークに参加</h1>
       <p className="mt-2 text-center text-text-dim">
         ルーム <span className="font-bold tracking-[0.15em] text-text">{code}</span>
         {info.status === "drawing" ? "（ガチャ中・投稿は締め切られています）" : null}
@@ -215,7 +215,7 @@ function Waiting({ view }: { view: RoomView }) {
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className="absolute inset-0 shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)]"
+            className="absolute inset-0 rounded-card shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)]"
             initial={false}
             animate={reduce ? undefined : { rotate: [i * 6 - 6, i * 6 - 3, i * 6 - 6], y: [0, -4, 0] }}
             transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.25, ease: "easeInOut" }}

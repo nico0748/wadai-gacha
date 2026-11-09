@@ -73,7 +73,7 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
     }
   }, [canDraw, onDraw, reduce]);
 
-  const pileCount = Math.min(remaining, 3);
+  const pileCount = remaining <= 0 ? 0 : Math.min(7, Math.ceil(remaining / 4));
   const shown = active?.topic ?? null;
   const lifting = active !== null && active.topic === null;
 
@@ -90,21 +90,25 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
           transition={{ duration: lifting ? 0.5 : 0.9 }}
         />
 
-        {/* The pile underneath */}
+        {/* The pile underneath: one sliver per few cards, so a full deck looks thick. */}
         {Array.from({ length: pileCount }).map((_, i) => {
           const depth = pileCount - i; // 1 = right under the active card
           return (
             <div
               key={`pile-${i}`}
-              className="absolute inset-0 shadow-[0_14px_30px_-14px_rgb(0_0_0/0.7)]"
+              className="absolute inset-0 rounded-card"
               style={{
-                transform: `translateY(${depth * 7}px) rotate(${(depth % 2 ? -1 : 1) * depth * 1.2}deg) scale(${1 - depth * 0.025})`,
-                filter: `brightness(${1 - depth * 0.12})`,
+                // Only the edges show below the top card, so they are plain card stock.
+                background: `linear-gradient(150deg, ${t.from}, ${t.to})`,
+                transform: `translate(${(depth % 2 ? -1 : 1) * Math.min(depth, 3) * 0.35}px, ${depth * 3.2}px) rotate(${((depth % 3) - 1) * 0.5}deg)`,
+                filter: `brightness(${1 - depth * 0.07})`,
+                boxShadow:
+                  depth === pileCount
+                    ? "0 18px 34px -14px rgb(0 0 0 / 0.75), inset 0 -1.5px 0 rgb(255 250 240 / 0.45)"
+                    : "inset 0 -1.5px 0 rgb(255 250 240 / 0.45)",
               }}
               aria-hidden="true"
-            >
-              <CardBack theme={theme} />
-            </div>
+            />
           );
         })}
 
