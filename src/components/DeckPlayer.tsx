@@ -64,7 +64,7 @@ function Round({
       canDraw={!finished}
       blockedNote={
         <div className="flex w-full max-w-xs flex-col items-center gap-3 text-center">
-          <p className="font-bold">全{deck.cards.length}枚、引き終わりました</p>
+          <p className="font-bold">全{deck.cards.length}枚、めくり終わりました</p>
           <button type="button" className="btn-quiet w-full" onClick={onReshuffle}>
             もう一度シャッフルする
           </button>
