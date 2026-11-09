@@ -6,16 +6,14 @@ import { DeckPlayer } from "@/components/DeckPlayer";
 import { SiteHeader } from "@/components/Logo";
 import { PlaySkeleton } from "@/components/PlaySkeleton";
 import { getDb } from "@/lib/db";
-import { BUILTIN_DECKS, findBuiltinDeck } from "@/lib/decks/builtin";
+import { findBuiltinDeck } from "@/lib/decks/builtin";
 import { getPublicDeck } from "@/lib/decks/service";
 
-// Other ids are looked up before any Suspense boundary, so a request that is
-// rendered dynamically (e.g. a link-preview bot) gets a real 404.
+// Ids are looked up before any Suspense boundary, so a request that is
+// rendered dynamically (e.g. a link-preview bot) gets a real 404. There is
+// deliberately no generateStaticParams: with it, `next start` writes a cache
+// entry to disk for every unknown id requested, so random URLs would fill it.
 export const instant = false;
-
-export function generateStaticParams() {
-  return BUILTIN_DECKS.map((d) => ({ id: d.id }));
-}
 
 async function loadAdminDeck(id: string) {
   await connection();
@@ -24,8 +22,8 @@ async function loadAdminDeck(id: string) {
 
 export default async function DeckPage({ params }: PageProps<"/decks/[id]">) {
   const id = decodeURIComponent((await params).id);
-  // Built-in decks never touch the database: they are prerendered and keep
-  // working even if it is down.
+  // Built-in decks never touch the database, so they keep working even if it
+  // is down.
   const deck = findBuiltinDeck(id) ?? (await loadAdminDeck(id));
   if (!deck) notFound();
   return (
