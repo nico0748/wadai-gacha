@@ -4,20 +4,40 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { usePolling } from "@/hooks/usePolling";
 import { api, ApiError } from "@/lib/client/api";
 import { LIMITS } from "@/lib/limits";
-import type { NameMode, RevealItem, RoomStatus, RoomView } from "@/lib/rooms/types";
+import type { RevealItem, RoomPublicInfo, RoomView } from "@/lib/rooms/types";
 import { CardBack } from "../GachaCard";
+import { JoinByCode } from "../JoinByCode";
 import { Phrase } from "../Phrase";
-import { Notice, RoomRules } from "./bits";
+import { Notice, OwnTopicList, RoomRules, WaitingCards } from "./bits";
+import { RevealCountdown, useMsUntil } from "./countdown";
+import { ShareListButton } from "./ResultActions";
 import { RevealList } from "./RevealList";
 import { TopicComposer } from "./TopicComposer";
-import { useRoom } from "./useRoom";
+import { jitterFor, phaseOf, useRoom } from "./useRoom";
 
 export function ParticipantRoom({ code }: { code: string }) {
   const router = useRouter();
-  const { session, state, refresh, offline, join } = useRoom(code, { pollMs: () => 2500 });
-
+  const { session, state, refresh, offline, join, clockOffset } = useRoom(code, {
+    pollMs: (v, due) => {
+      if (!v) return 2500;
+      switch (phaseOf(v)) {
+        case "collecting":
+          return 2500;
+        case "drawing":
+          return 4500 + jitterFor(v.me.id, 1000);
+        // Often enough to catch the host's せーの with the countdown still running.
+        case "held":
+          return due ? 500 : 1500;
+        case "answers":
+          return v.room.authorsShown > 0 ? 1500 : 2500;
+        case "done":
+          return null;
+      }
+    },
+  });
   const isHost = state.kind === "ready" && state.view.role === "host";
   useEffect(() => {
     if (isHost) router.replace(`/room/${code}/host`);
@@ -27,22 +47,15 @@ export function ParticipantRoom({ code }: { code: string }) {
     return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
   }
   if (state.kind === "gone") {
-    return (
-      <Notice title="ルームが見つかりません" body={state.message}>
-        <Link href="/" className="btn-quiet">
-          トップへ
-        </Link>
-      </Notice>
-    );
+    return <RoomNotFound message={state.message} />;
   }
   if (!session || state.kind === "no-session") {
-    return (
-      <JoinForm code={code} onJoined={join} />
-    );
+    return <JoinForm code={code} onJoined={join} />;
   }
   if (state.kind !== "ready") return null;
 
   const view = state.view;
+  const phase = phaseOf(view);
   return (
     <div className="mx-auto w-full max-w-xl">
       {offline ? (
@@ -54,10 +67,15 @@ export function ParticipantRoom({ code }: { code: string }) {
         ルーム <span className="font-bold tracking-[0.15em] text-text">{view.room.code}</span>
         {view.me.nickname ? <> ・ {view.me.nickname}</> : null}
       </p>
-      {view.room.status === "collecting" ? (
+      {phase === "collecting" ? (
         <Collecting view={view} token={session.token} refresh={refresh} />
-      ) : view.room.status === "drawing" ? (
+      ) : phase === "drawing" ? (
         <Waiting view={view} />
+      ) : phase === "held" ? (
+        <>
+          <Held view={view} />
+          <RevealCountdown revealAt={view.revealAt} offsetMs={clockOffset} />
+        </>
       ) : (
         <Reveal view={view} />
       )}
@@ -65,56 +83,83 @@ export function ParticipantRoom({ code }: { code: string }) {
   );
 }
 
-interface PublicInfo {
-  status: RoomStatus;
-  nameMode: NameMode;
-  reveal: RevealItem[] | null;
+function RoomNotFound({ message }: { message: string }) {
+  return (
+    <Notice title="ルームが見つかりません" body={message} footer={<JoinByCode />}>
+      <Link href="/" className="btn-quiet">
+        トップへ
+      </Link>
+    </Notice>
+  );
 }
 
 function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: string }) => void }) {
-  const [info, setInfo] = useState<PublicInfo | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [info, setInfo] = useState<{ data: RoomPublicInfo; offset: number } | null>(null);
+  // status 0: the network; anything else came from the server.
+  const [loadError, setLoadError] = useState<{ message: string; status: number } | null>(null);
   const [nickname, setNickname] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadInfo = useCallback(
-    () =>
-      api<PublicInfo>(`/api/rooms/${encodeURIComponent(code)}/info`)
-        .then(setInfo)
-        .catch((e) => setLoadError(e instanceof ApiError ? e.message : "ルームを読み込めませんでした")),
-    [code],
-  );
-  useEffect(() => {
-    void loadInfo();
-  }, [loadInfo]);
+  const loadInfo = useCallback(async () => {
+    const sentAt = Date.now();
+    try {
+      const data = await api<RoomPublicInfo>(`/api/rooms/${encodeURIComponent(code)}/info`);
+      setInfo({ data, offset: Date.parse(data.serverNow) - (sentAt + Date.now()) / 2 });
+      setLoadError(null);
+    } catch (e) {
+      setLoadError(
+        e instanceof ApiError ? { message: e.message, status: e.status } : { message: "ルームを読み込めませんでした", status: 0 },
+      );
+    }
+  }, [code]);
 
-  if (loadError) {
-    return (
-      <Notice title="ルームが見つかりません" body={loadError}>
-        <Link href="/" className="btn-quiet">
-          トップへ
-        </Link>
-      </Notice>
-    );
-  }
-  if (!info) return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
-  if (info.status === "ended") {
+  // Loads once; then only someone without a session (another browser, a
+  // late arrival) watching a held list or a named room's 答え合わせ keeps
+  // polling, to get the countdown and the names. Any answer from the server
+  // other than the room (gone, rate limited) stops it: missed lookups count
+  // against the whole network's join limit.
+  const data = info?.data ?? null;
+  const heldUntil = data && data.status === "ended" && !data.reveal ? data.revealAt : null;
+  const msLeft = useMsUntil(heldUntil, info?.offset ?? 0);
+  const due = msLeft !== null && msLeft <= 0;
+  const answering = Boolean(
+    data?.reveal && data.nameMode === "named" && data.reveal.some((r) => r.author === null),
+  );
+  const refused = loadError !== null && loadError.status !== 0;
+  usePolling(
+    loadInfo,
+    heldUntil ? (due ? 700 : 2500) : 5000,
+    data ? !refused && (Boolean(heldUntil) || answering) : !loadError,
+  );
+
+  if (loadError && (!data || loadError.status === 404)) return <RoomNotFound message={loadError.message} />;
+  if (!data || !info) return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
+  if (data.status === "ended") {
+    if (!data.reveal) {
+      return (
+        <div className="mx-auto w-full max-w-xl">
+          <HeldMessage code={code} />
+          <RevealCountdown revealAt={data.revealAt} offsetMs={info.offset} />
+        </div>
+      );
+    }
     return (
       <div className="mx-auto w-full max-w-xl">
-        <h1 className="font-display text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ガチャ終了！</h1>
+        <h1 className="font-display text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ぜんぶオープン！</h1>
         <p className="jp-wrap mt-2 text-text-dim">
           <Phrase text={`ルーム ${code} で集まった話題を、全部公開しています。`} />
         </p>
+        <AnswersNote reveal={data.reveal} named={data.nameMode === "named"} />
         <div className="mt-10">
-          <RevealList items={info.reveal ?? []} named={info.nameMode === "named"} />
+          <RevealList items={data.reveal} named={data.nameMode === "named"} />
         </div>
-        <EndActions />
+        <EndActions items={data.reveal} />
       </div>
     );
   }
 
-  const needsName = info.nameMode !== "none";
+  const needsName = data.nameMode !== "none";
 
   async function join(e: React.FormEvent) {
     e.preventDefault();
@@ -147,7 +192,7 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
       <h1 className="text-center font-display text-[1.7rem] leading-tight">めくトークに参加</h1>
       <p className="mt-2 text-center text-text-dim">
         ルーム <span className="font-bold tracking-[0.15em] text-text">{code}</span>
-        {info.status === "drawing" ? "（ガチャ中・投稿は締め切られています）" : null}
+        {data.status === "drawing" ? "（めくり中・投稿は締め切られています）" : null}
       </p>
       <form onSubmit={join} className="mt-8 grid gap-4">
         {needsName ? (
@@ -165,9 +210,9 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
             <span className="jp-wrap mt-2 block text-sm text-text-dim">
               <Phrase
                 text={
-                  info.nameMode === "anonymous"
+                  data.nameMode === "anonymous"
                     ? "誰が何を投稿したかは、最後まで公開されません。"
-                    : "ガチャが終わると、投稿した話題にこの名前が表示されます。"
+                    : "終わったあとの答え合わせで、投稿した話題にこの名前が表示されます。"
                 }
               />
             </span>
@@ -183,6 +228,9 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
         <button type="submit" className="btn-primary min-h-14 text-[1.05rem]" disabled={busy || (needsName && !nickname.trim())}>
           {busy ? "参加しています…" : "参加する"}
         </button>
+        <p className="jp-wrap text-center text-xs text-text-dim">
+          <Phrase text="ホストは終了後、話題を名前なしでデッキとして残せます。" />
+        </p>
       </form>
     </div>
   );
@@ -193,7 +241,7 @@ function Collecting({ view, token, refresh }: { view: RoomView; token: string; r
     <>
       <h1 className="font-display text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">話題を投稿しよう</h1>
       <p className="jp-wrap mt-2 text-text-dim">
-        <Phrase text="ほかの人の投稿は、ガチャが終わるまで見えません。" />
+        <Phrase text="ほかの人の投稿は、終わるまで見えません。" />
         <br />
         今は<span className="mx-1 font-bold text-lamp tabular-nums">{view.counts.topics}件</span>集まっています。
       </p>
@@ -208,54 +256,64 @@ function Collecting({ view, token, refresh }: { view: RoomView; token: string; r
 }
 
 function Waiting({ view }: { view: RoomView }) {
-  const reduce = useReducedMotion();
   return (
     <div className="flex flex-col items-center pt-6 text-center">
-      <div className="relative mb-10 h-44 w-32" aria-hidden="true">
-        {[0, 1, 2].map((i) => (
-          <motion.div
-            key={i}
-            className="absolute inset-0 rounded-card shadow-[0_18px_34px_-16px_rgb(0_0_0/0.85)]"
-            initial={false}
-            animate={reduce ? undefined : { rotate: [i * 6 - 6, i * 6 - 3, i * 6 - 6], y: [0, -4, 0] }}
-            transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.25, ease: "easeInOut" }}
-            style={{ rotate: i * 6 - 6 }}
-          >
-            <CardBack theme="yoru" />
-          </motion.div>
-        ))}
-      </div>
+      <WaitingCards />
       <h1 className="font-display text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">ホストのスマホに注目！</h1>
       <p className="jp-wrap mt-3 text-text-dim">
         {view.room.drawCount === 0 ? (
-          "ガチャが始まりました。もうすぐ1枚目が引かれます。"
+          "めくり始めました。もうすぐ1枚目が出ます。"
         ) : (
           <>
-            これまでに<span className="mx-1 font-bold text-text tabular-nums">{view.room.drawCount}枚</span>引かれました。
+            これまでに<span className="mx-1 font-bold text-text tabular-nums">{view.room.drawCount}枚</span>めくりました。
           </>
         )}
         <br />
         終わったら、ここに全部の話題が届きます。
       </p>
-      {view.myTopics.length > 0 ? (
-        <section className="mt-10 w-full text-left" aria-label="あなたの投稿">
-          <h2 className="mb-2 text-sm font-bold text-text-dim">あなたの投稿（{view.myTopics.length}件）</h2>
-          <ul className="grid gap-2">
-            {view.myTopics.map((t) => (
-              <li key={t.id} className="rounded-[0.8rem] border border-line/70 bg-ink-raised px-4 py-2.5 break-words">
-                {t.text}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <OwnTopicList topics={view.myTopics} />
     </div>
+  );
+}
+
+function HeldMessage({ code }: { code?: string }) {
+  return (
+    <div className="flex flex-col items-center pt-6 text-center">
+      <WaitingCards />
+      <h1 className="font-display text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">ホストの合図で公開します</h1>
+      <p className="jp-wrap mt-3 text-text-dim">
+        <Phrase
+          text={`${code ? `ルーム ${code} は` : ""}全部めくり終わりました。合図があると、みんなのスマホで一覧が一斉に開きます。`}
+        />
+      </p>
+    </div>
+  );
+}
+
+function Held({ view }: { view: RoomView }) {
+  return (
+    <>
+      <HeldMessage />
+      <OwnTopicList topics={view.myTopics} />
+    </>
+  );
+}
+
+function AnswersNote({ reveal, named }: { reveal: RevealItem[]; named: boolean }) {
+  const hidden = reveal.filter((r) => r.author === null).length;
+  if (!named || hidden === 0) return null;
+  return (
+    <p role="status" className="mt-4 rounded-card border border-lamp/40 bg-lamp/5 px-4 py-3 text-sm font-bold">
+      {hidden < reveal.length
+        ? "ホストのスマホで、誰が書いたかの答え合わせをしています。"
+        : "誰が書いたかは、ホストの合図で公開されます。"}
+    </p>
   );
 }
 
 function Reveal({ view }: { view: RoomView }) {
   const reduce = useReducedMotion();
-  const total = view.reveal?.length ?? 0;
+  const items = view.reveal ?? [];
   return (
     <>
       <motion.div
@@ -263,32 +321,34 @@ function Reveal({ view }: { view: RoomView }) {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", stiffness: 220, damping: 18 }}
       >
-        <h1 className="font-display text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ガチャ終了！</h1>
+        <h1 className="font-display text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ぜんぶオープン！</h1>
         <p className="mt-2 text-text-dim">
-          みんなが出した<span className="mx-1 font-bold text-lamp tabular-nums">{total}件</span>の話題を、全部公開します。
+          みんなが出した<span className="mx-1 font-bold text-lamp tabular-nums">{items.length}件</span>の話題を、全部公開します。
         </p>
       </motion.div>
+      <AnswersNote reveal={items} named={view.room.nameMode === "named"} />
       <div className="mt-10">
-        <RevealList
-          items={view.reveal ?? []}
-          mine={view.myTopics.map((t) => t.id)}
-          named={view.room.nameMode === "named"}
-        />
+        <RevealList items={items} mine={view.myTopics.map((t) => t.id)} named={view.room.nameMode === "named"} />
       </div>
-      <EndActions />
+      <EndActions items={items} />
     </>
   );
 }
 
-function EndActions() {
+function EndActions({ items }: { items: RevealItem[] }) {
   return (
-    <div className="mt-12 flex flex-wrap gap-3">
-      <Link href="/room/new" className="btn-primary">
-        自分もルームを作る
-      </Link>
-      <Link href="/" className="btn-quiet">
-        トップへ
-      </Link>
+    <div className="mt-12 grid gap-6">
+      <div>
+        <ShareListButton items={items} />
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <Link href="/room/new" className="btn-primary">
+          自分もルームを作る
+        </Link>
+        <Link href="/" className="btn-quiet">
+          トップへ
+        </Link>
+      </div>
     </div>
   );
 }
