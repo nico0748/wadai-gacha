@@ -321,7 +321,7 @@ function Collecting({
               initial={reduce ? false : { scale: 1.35, color: "#f2c46d" }}
               animate={{ scale: 1, color: "#eef0f7" }}
               transition={{ type: "spring", stiffness: 300, damping: 16 }}
-              className="inline-block font-display text-[2rem] leading-none tabular-nums"
+              className="inline-block font-display text-[2rem] leading-none"
             >
               {topics}
             </motion.span>

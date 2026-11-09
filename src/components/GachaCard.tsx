@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { themeOf } from "@/lib/decks/themes";
-import { bandGradient, topicSize } from "./cardDesign";
+import { bandColors, topicSize } from "./cardDesign";
 import { BubbleMark } from "./Logo";
 import { Phrase } from "./Phrase";
 
@@ -9,11 +9,15 @@ const BUBBLE_TILE = encodeURIComponent(
   `<svg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 26 26'><path transform='translate(8.04 8.38) scale(.31)' d='M16 4.5c7.46 0 13.5 4.66 13.5 10.4S23.46 25.3 16 25.3c-1.38 0-2.72-.16-3.98-.46L5.6 28.9l1.72-5.86C4.3 21.15 2.5 18.2 2.5 14.9 2.5 9.16 8.54 4.5 16 4.5z' fill='white' fill-opacity='.24'/></svg>`,
 );
 
-export function CardBack({ theme, label }: { theme: string; label?: string }) {
+/**
+ * The back of a card. `mini` is a small tile (the reveal list): the same
+ * stock and bubble mark, with a frame and mark that fit a short tile.
+ */
+export function CardBack({ theme, label, mini = false }: { theme: string; label?: string; mini?: boolean }) {
   const t = themeOf(theme);
   return (
     <div
-      className="@container absolute inset-0 overflow-hidden rounded-card"
+      className={`@container absolute inset-0 overflow-hidden ${mini ? "rounded-[0.8rem]" : "rounded-card"}`}
       style={{ background: `linear-gradient(150deg, ${t.from}, ${t.to})` }}
     >
       <div
@@ -24,11 +28,17 @@ export function CardBack({ theme, label }: { theme: string; label?: string }) {
           backgroundPosition: "0 0, 13px 13px",
         }}
       />
-      <div className="absolute inset-[5.5%] rounded-[0.75rem] border-[1.5px] border-white/45" />
+      <div
+        className={`absolute border-[1.5px] border-white/45 ${mini ? "inset-[0.4rem] rounded-[0.5rem]" : "inset-[5.5%] rounded-[0.75rem]"}`}
+      />
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-[6cqi]">
         <div
-          className="grid aspect-square w-[40cqi] place-items-center rounded-full bg-paper"
-          style={{ boxShadow: `0 0 0 2px ${t.ink}26, 0 0 0 7px rgb(255 250 240 / 0.28), 0 10px 24px -10px ${t.ink}` }}
+          className={`grid aspect-square place-items-center rounded-full bg-paper ${mini ? "w-11" : "w-[40cqi]"}`}
+          style={{
+            boxShadow: mini
+              ? `0 0 0 1.5px ${t.ink}26, 0 0 0 4px rgb(255 250 240 / 0.28), 0 6px 14px -6px ${t.ink}`
+              : `0 0 0 2px ${t.ink}26, 0 0 0 7px rgb(255 250 240 / 0.28), 0 10px 24px -10px ${t.ink}`,
+          }}
         >
           <BubbleMark color={t.to} className="h-[60%] w-[60%] translate-y-[4%]" />
         </div>
@@ -77,6 +87,7 @@ export function CardFront({
   style?: CSSProperties;
 }) {
   const t = themeOf(theme);
+  const band = bandColors(t);
   return (
     <div
       className={`@container absolute inset-0 overflow-hidden rounded-card ${rare ? "bg-foil p-[3.2%]" : "p-[2.2%]"}`}
@@ -88,13 +99,14 @@ export function CardFront({
       >
         {/* The deck's band: card number and deck name, like the head of a playing card. */}
         <div
-          className="flex h-[13%] shrink-0 items-center justify-between gap-[3cqi] px-[5cqi] text-white"
-          style={{ background: bandGradient(t) }}
+          className="flex h-[13%] shrink-0 items-center justify-between gap-[3cqi] px-[5cqi]"
+          style={band}
         >
           {order ? (
             <span className="flex items-baseline gap-[1.2cqi] leading-none">
-              <span className="text-[3.6cqi] font-black tracking-wider opacity-85">No.</span>
-              <span className="font-display text-[7.6cqi] tabular-nums">{order}</span>
+              <span className="text-[3.6cqi] font-black tracking-wider">No.</span>
+              {/* No tabular-nums: Dela Gothic's tabular 1 is narrow in a wide cell, so 11 reads as 1 1. */}
+              <span className="font-display text-[7.6cqi]">{order}</span>
             </span>
           ) : (
             <span />

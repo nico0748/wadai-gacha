@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { RevealItem } from "@/lib/rooms/types";
 import { themeOf } from "@/lib/decks/themes";
+import { CardBack } from "../GachaCard";
 import { Phrase } from "../Phrase";
 
 /** The first card starts turning this long after the list appears; the next ones follow. */
@@ -92,18 +93,18 @@ export function RevealList({
                     </p>
                     {meta(item, true, delay + FLIP_DURATION / 2 + AUTHOR_LAG)}
                   </div>
-                  {/* Back: the deck's colours, until the card turns. */}
+                  {/* Back: the real card back, until the card turns. */}
                   <div
                     aria-hidden="true"
-                    className="absolute inset-0 rounded-[0.8rem]"
+                    className="absolute inset-0 rounded-[0.8rem] shadow-[0_12px_24px_-14px_rgb(0_0_0/0.85)]"
                     style={{
                       transform: "rotateY(180deg)",
                       backfaceVisibility: "hidden",
                       WebkitBackfaceVisibility: "hidden",
-                      background: `linear-gradient(150deg, ${t.from}, ${t.to})`,
-                      boxShadow: "inset 0 0 0 4px rgb(255 255 255 / 0.18)",
                     }}
-                  />
+                  >
+                    <CardBack theme={theme} mini />
+                  </div>
                 </motion.div>
               </li>
             );
@@ -124,7 +125,7 @@ export function RevealList({
                 className="flex items-start gap-4 rounded-[0.9rem] bg-ink-raised py-3 pr-4 pl-3 ring-1 ring-white/12"
               >
                 <span
-                  className="relative grid h-11 w-11 shrink-0 place-items-center rounded-[0.65rem] font-display text-[1.1rem] text-white tabular-nums"
+                  className="relative grid h-11 w-11 shrink-0 place-items-center rounded-[0.65rem] font-display text-[1.1rem] text-white"
                   style={{ background: `linear-gradient(150deg, ${t.from}, ${t.to})` }}
                 >
                   <span className="sr-only">{item.order}枚目</span>

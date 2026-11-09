@@ -75,8 +75,12 @@ body {
     word-break: auto-phrase;
   }
 }
-p {
-  text-wrap: pretty;
+/* In the base layer, so a text-wrap utility on a paragraph (the card topic's
+   balance) wins over it. */
+@layer base {
+  p {
+    text-wrap: pretty;
+  }
 }
 
 /* The note that replaces the draw button after the last card. It waits until
@@ -167,6 +171,62 @@ p {
 }
 .charge-glow {
   animation: charge-glow 0.28s ease-in-out infinite alternate;
+}
+/* On a phone the card fills the width and the glow around it barely shows,
+   so the face itself lights up: a foil rim fades in where the rare frame
+   will be, and warm light pulses in from the edges. */
+.charge-glow::before,
+.charge-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1; /* over the card back inside */
+  border-radius: inherit;
+  pointer-events: none;
+}
+.charge-glow::before {
+  padding: 3.2%;
+  background: linear-gradient(
+    135deg,
+    var(--color-foil-light) 0%,
+    var(--color-lamp) 18%,
+    var(--color-foil-deep) 34%,
+    var(--color-foil-light) 50%,
+    var(--color-lamp) 64%,
+    var(--color-foil-deep) 82%,
+    var(--color-lamp) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  animation: charge-rim 0.22s ease-out both;
+}
+.charge-glow::after {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-foil-light) 80%, transparent),
+    inset 0 0 18px 4px color-mix(in srgb, var(--color-lamp) 75%, transparent),
+    inset 0 0 64px 10px color-mix(in srgb, var(--color-lamp) 40%, transparent);
+  animation: charge-face 0.28s ease-in-out infinite alternate;
+}
+@keyframes charge-rim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes charge-face {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @utility btn {
