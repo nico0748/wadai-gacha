@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import type { Deck } from "@/lib/decks/types";
+import { rollRare } from "@/lib/rarity";
 import { CardStage, type DrawnTopic } from "./CardStage";
 
 function shuffle<T>(items: T[]): T[] {
@@ -17,11 +18,28 @@ function shuffle<T>(items: T[]): T[] {
 /** Normal mode: the whole deck is shuffled on this device; drawn cards leave the pile. */
 export function DeckPlayer({ deck }: { deck: Pick<Deck, "title" | "theme" | "cards"> }) {
   const [round, setRound] = useState(0);
+  // Rarity is rolled on this device, so it works offline. The streak of
+  // non-rare draws carries over a reshuffle, so the pity limit still holds.
+  const misses = useRef(0);
+  const roll = useCallback(() => {
+    const rare = rollRare(misses.current);
+    misses.current = rare ? 0 : misses.current + 1;
+    return rare;
+  }, []);
   useWakeLock(true);
-  return <Round key={round} deck={deck} onReshuffle={() => setRound((r) => r + 1)} />;
+  return <Round key={round} deck={deck} rollRare={roll} onReshuffle={() => setRound((r) => r + 1)} />;
 }
 
-function Round({ deck, onReshuffle }: { deck: Pick<Deck, "title" | "theme" | "cards">; onReshuffle: () => void }) {
+function Round({
+  deck,
+  rollRare: roll,
+  onReshuffle,
+}: {
+  deck: Pick<Deck, "title" | "theme" | "cards">;
+  /** Rolls whether the next draw is rare. */
+  rollRare: () => boolean;
+  onReshuffle: () => void;
+}) {
   // Shuffled once per round; a reshuffle remounts this component.
   const [pile, setPile] = useState(() => shuffle(deck.cards));
   const [drawnCount, setDrawnCount] = useState(0);
@@ -32,8 +50,8 @@ function Round({ deck, onReshuffle }: { deck: Pick<Deck, "title" | "theme" | "ca
     setPile((p) => p.slice(1));
     const order = drawnCount + 1;
     setDrawnCount(order);
-    return { text, order };
-  }, [pile, drawnCount]);
+    return { text, order, rare: roll() };
+  }, [pile, drawnCount, roll]);
 
   const finished = pile.length === 0;
 
