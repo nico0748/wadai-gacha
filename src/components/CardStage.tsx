@@ -107,7 +107,7 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
       if (!reduce) navigator.vibrate?.(rare ? RARE_BUZZ : BUZZ);
     } catch (e) {
       setActive(null);
-      setError(e instanceof Error ? e.message : "カードを引けませんでした");
+      setError(e instanceof Error ? e.message : "カードをめくれませんでした");
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -209,7 +209,7 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
       </div>
 
       <p aria-live="polite" className="sr-only">
-        {shown ? `引いたカード${shown.rare ? "（レア）" : ""}: ${shown.text}` : ""}
+        {shown ? `めくったカード${shown.rare ? "（レア）" : ""}: ${shown.text}` : ""}
       </p>
 
       <div className="relative mt-10 flex min-h-24 w-full max-w-xs flex-col items-center gap-3 short-landscape:mt-0">
