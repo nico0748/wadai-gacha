@@ -72,7 +72,7 @@ test("host collects topics by QR, draws them, and everyone opens the list togeth
   // The list is held for the host's signal, also after a reload of the host page.
   await expect(guest.getByRole("heading", { name: "ホストの合図で公開します" })).toBeVisible({ timeout: 10_000 });
   await expect(guest.getByText("推しのエディタ")).toHaveCount(1); // only in their own list
-  await expect(guest.getByText("引かれた！")).toHaveCount(2);
+  await expect(guest.getByText("めくられた！")).toHaveCount(2);
   await expect(guest.getByText("子どもの頃の夢")).toHaveCount(0);
   await page.reload();
   await expect(page.getByText("これが最後の1枚です")).toBeVisible();
@@ -86,6 +86,9 @@ test("host collects topics by QR, draws them, and everyone opens the list togeth
   await expect(guest.getByRole("button", { name: "一覧を送る" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "ぜんぶオープン！" })).toBeVisible({ timeout: REVEAL_TIMEOUT });
   await expect(page.getByRole("button", { name: "この話題でデッキを作る" })).toBeVisible();
+  // The host's phone lies on the table: it never marks whose topics are whose.
+  await expect(page.getByText("子どもの頃の夢")).toBeVisible();
+  await expect(page.getByText("あなたの投稿")).toHaveCount(0);
   await guestCtx.close();
 
   // Someone who opens the QR link only after the end still gets the list.
@@ -123,12 +126,16 @@ test("named room: the host ends early with せーの, then runs 答え合わせ"
   await expect(guest.getByText("ニコ")).toHaveCount(0);
   await expect(guest.getByText("？")).toHaveCount(3);
 
-  // Guess mode on the host's phone: one topic at a time.
+  // Guess mode on the host's phone: one topic at a time. Until every name is
+  // out, the table screen does not mark the host's own topic either.
   await expect(page.getByRole("heading", { name: "ぜんぶオープン！" })).toBeVisible({ timeout: REVEAL_TIMEOUT });
+  await expect(page.getByText("好きな駅弁")).toBeVisible();
+  await expect(page.getByText("あなたの投稿")).toHaveCount(0);
   await page.getByRole("button", { name: "誰が書いたか当てる" }).click();
   await expect(page.getByText("（1 / 3）")).toBeVisible();
   await expect(page.getByText("？", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "答え", exact: true }).click();
+  await expect(page.getByRole("button", { name: "この話題でデッキを作る" })).toHaveCount(0);
+  await page.getByRole("button", { name: "答えを見る" }).click();
   await expect(page.getByText(/^(ケン|ニコ)$/)).toBeVisible();
   await expect(guest.getByText("？")).toHaveCount(2, { timeout: 10_000 });
   await page.getByRole("button", { name: "次へ" }).click();
@@ -139,6 +146,7 @@ test("named room: the host ends early with せーの, then runs 答え合わせ"
   await expect(page.getByText("（2 / 3）")).toBeVisible();
   await page.getByRole("button", { name: "残りを全部見せる" }).click();
   await expect(page.getByRole("heading", { name: "めくった話題" })).toBeVisible();
+  await expect(page.getByText("あなたの投稿")).toHaveCount(1);
   await expect(guest.getByText("ニコ")).toBeVisible({ timeout: 10_000 });
   await expect(guest.getByText("？")).toHaveCount(0);
 
@@ -179,8 +187,11 @@ test("a host link with a participant's token does not grant host rights", async 
   await otherCtx.close();
 });
 
-test("an unknown room offers the room code field", async ({ page }) => {
-  await page.goto("/room/ZZZZZZ");
-  await expect(page.getByRole("heading", { name: "ルームが見つかりません" })).toBeVisible();
-  await expect(page.getByLabel("QRが読めないときは、ルームコードで参加")).toBeVisible();
+test("an unknown room offers the decks and the room code field, also on its host URL", async ({ page }) => {
+  for (const path of ["/room/ZZZZZZ", "/room/ZZZZZZ/host"]) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { name: "ルームが見つかりません" }), path).toBeVisible();
+    await expect(page.getByRole("link", { name: "デッキ一覧を見る" }), path).toBeVisible();
+    await expect(page.getByLabel("QRが読めないときは、ルームコードで参加"), path).toBeVisible();
+  }
 });

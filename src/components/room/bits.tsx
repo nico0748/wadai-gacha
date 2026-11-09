@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import type { OwnTopic, RoomSummary } from "@/lib/rooms/types";
 import { CardBack } from "../GachaCard";
+import { Phrase } from "../Phrase";
 
 export function RoomRules({ room }: { room: RoomSummary }) {
   const end = room.endMode === "count" ? `${room.drawLimit}回めくったら終了` : "全部めくり終わるまで";
@@ -45,10 +46,15 @@ export function Notice({
   );
 }
 
-/** The bar fixed to the bottom of the screen, for the host's main action and its confirmation. */
-export function BottomBar({ children }: { children: React.ReactNode }) {
+/**
+ * The bar fixed to the bottom of the screen, for the host's main action and
+ * its confirmation. `className` can place it elsewhere on other screens.
+ */
+export function BottomBar({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line/70 bg-ink/92 px-4 pt-3 pb-[max(0.9rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+    <div
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-line/70 bg-ink/92 px-4 pt-3 pb-[max(0.9rem,env(safe-area-inset-bottom))] backdrop-blur-md ${className}`}
+    >
       <div className="mx-auto grid max-w-xl gap-2">{children}</div>
     </div>
   );
@@ -56,7 +62,7 @@ export function BottomBar({ children }: { children: React.ReactNode }) {
 
 export function DrawnBadge() {
   return (
-    <span className="shrink-0 rounded-full bg-lamp/20 px-2.5 py-0.5 text-xs font-black text-lamp">引かれた！</span>
+    <span className="shrink-0 rounded-full bg-lamp/20 px-2.5 py-0.5 text-xs font-black text-lamp">めくられた！</span>
   );
 }
 
@@ -74,7 +80,9 @@ export function OwnTopicList({ topics }: { topics: OwnTopic[] }) {
               t.drawn ? "border-lamp/50" : "border-line/70"
             }`}
           >
-            <span className="min-w-0 flex-1 break-words">{t.text}</span>
+            <span className="jp-wrap min-w-0 flex-1">
+              <Phrase text={t.text} />
+            </span>
             {t.drawn ? <DrawnBadge /> : null}
           </li>
         ))}
