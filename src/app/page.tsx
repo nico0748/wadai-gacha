@@ -18,13 +18,13 @@ export default function Home() {
       <SiteHeader />
       <main className="mx-auto grid w-full max-w-5xl flex-1 gap-14 px-4 pt-6 pb-16 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-10 lg:pt-14">
         <section>
-          <h1 className="jp-wrap font-display text-[clamp(2.3rem,10.5vw,3.6rem)] leading-[1.2] tracking-[0.01em]">
-            今夜の話題は、
+          <h1 className="jp-wrap font-display text-[clamp(2.9rem,15vw,4.75rem)] leading-[1.14] tracking-[0.02em]">
+            めくって、
             <br />
-            ガチャで決める。
+            話そう。
           </h1>
-          <p className="jp-wrap mt-5 max-w-[30em] text-[1.02rem] text-text-dim">
-            <Phrase text="その場のみんなが話題を出し合って、ホストのスマホでカードを1枚ずつ引く。何が出るかは、めくるまで誰にもわかりません。" />
+          <p className="jp-wrap mt-6 max-w-[30em] text-[1.02rem] text-text-dim">
+            <Phrase text="みんなで話題を出し合って、テーブルに置いたスマホでカードを1枚ずつめくります。何が出るかは、お楽しみです。" />
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:max-w-sm">
@@ -77,7 +77,7 @@ export default function Home() {
             {[
               ["ホストがルームを作る", "テーブルに置いたスマホにQRコードが出ます。"],
               ["みんなが話題を投稿する", "QRを読み込んで、聞いてみたいことを何件でも。誰が何を書いたかは秘密です。"],
-              ["カードを引いて話す", "ホストのスマホでめくって、出た話題でトーク。終わったら全員のスマホに一覧が届きます。"],
+              ["カードをめくって話す", "ホストのスマホで1枚ずつめくって、出た話題でトーク。終わったら全員のスマホに一覧が届きます。"],
             ].map(([title, body], i) => (
               <li key={title} className="flex gap-5 border-b border-line/70 py-5 sm:border-t sm:border-b-0">
                 <span className="w-8 shrink-0 font-display text-[2.5rem] leading-none text-lamp tabular-nums" aria-hidden="true">

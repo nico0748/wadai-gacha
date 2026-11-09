@@ -21,6 +21,10 @@
   --color-accent: #a9acdb;
   /* The lamp over the table: focus rings, counters and the moment a card turns. */
   --color-lamp: #f2c46d;
+  /* Gold foil for rare draws: the lamp colour, catching and losing the light. */
+  --color-foil-light: #ffe9b3;
+  --color-foil-deep: #b9822f;
+  --color-foil-ink: #4a3208;
   --color-danger: #ff8a80;
 
   --font-display: var(--font-dela), "Hiragino Sans", sans-serif;
@@ -96,6 +100,73 @@ p {
 ::selection {
   background: var(--color-primary-deep);
   color: white;
+}
+
+/* Gold foil (rare frame and stamp). */
+@utility bg-foil {
+  background: linear-gradient(
+    135deg,
+    var(--color-foil-light) 0%,
+    var(--color-lamp) 18%,
+    var(--color-foil-deep) 34%,
+    var(--color-foil-light) 50%,
+    var(--color-lamp) 64%,
+    var(--color-foil-deep) 82%,
+    var(--color-lamp) 100%
+  );
+}
+
+/* Holographic light running over a card back while it is in the air. */
+@keyframes holo-sweep {
+  from {
+    background-position: 135% 0;
+  }
+  to {
+    background-position: -35% 0;
+  }
+}
+.holo-sweep {
+  background: linear-gradient(
+    112deg,
+    transparent 30%,
+    color-mix(in srgb, var(--color-accent) 45%, transparent) 40%,
+    rgb(255 255 255 / 0.7) 47%,
+    color-mix(in srgb, var(--color-lamp) 70%, transparent) 53%,
+    color-mix(in srgb, var(--color-accent) 40%, transparent) 60%,
+    transparent 70%
+  );
+  background-size: 280% 100%;
+  animation: holo-sweep 0.95s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+/* A rare draw: the sweep turns gold and hurries. */
+.holo-sweep-gold {
+  background: linear-gradient(
+    112deg,
+    transparent 28%,
+    color-mix(in srgb, var(--color-lamp) 55%, transparent) 40%,
+    rgb(255 250 235 / 0.85) 48%,
+    color-mix(in srgb, var(--color-lamp) 75%, transparent) 56%,
+    transparent 72%
+  );
+  background-size: 280% 100%;
+  animation: holo-sweep 0.55s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+
+/* The lifted card glows gold once the draw comes back rare. */
+@keyframes charge-glow {
+  from {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--color-lamp) 70%, transparent),
+      0 0 22px 4px color-mix(in srgb, var(--color-lamp) 45%, transparent);
+  }
+  to {
+    box-shadow:
+      0 0 0 3px var(--color-lamp),
+      0 0 40px 12px color-mix(in srgb, var(--color-lamp) 70%, transparent);
+  }
+}
+.charge-glow {
+  animation: charge-glow 0.28s ease-in-out infinite alternate;
 }
 
 @utility btn {
