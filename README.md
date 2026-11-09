@@ -45,7 +45,7 @@ http://localhost:3000 を開きます。データベースの準備は不要で�
 | `src/assets/mekutalk-title.png` | ヘッダーのタイトル（元画像を幅1200pxに縮小） |
 | `src/app/apple-icon.png` | iPhoneのホーム画面アイコン（180px） |
 | `public/icons/icon-*.png` | Androidのホーム画面アイコン（`src/app/manifest.ts` から参照） |
-| `src/app/icon.svg`、`src/app/favicon.ico` | ブラウザのタブのアイコン。16pxでも形がわかるよう、文字を省いたカードと吹き出しだけの版 |
+| `src/app/favicon.ico`、`src/app/icon.png` | ブラウザのタブのアイコン（ファビコン用の画像から周りの透過ノイズを除いて書き出し。16・32・48pxと256px） |
 | `src/app/opengraph-image.png` | SNSで共有したときの画像（1200×630） |
 
 ## コマンド
