@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { api } from "@/lib/client/api";
 import { LIMITS } from "@/lib/limits";
 import type { OwnTopic } from "@/lib/rooms/types";
+import { Phrase } from "../Phrase";
 import { DrawnBadge } from "./bits";
 
 const IDEAS = ["最近ハマっていることは？", "子どもの頃の夢は？", "人生で一番おいしかったもの", "最近買ってよかったもの"];
@@ -111,7 +112,9 @@ export function TopicComposer({
                     t.drawn ? "border-lamp/50" : justAdded === t.id ? "border-accent/60" : "border-line/70"
                   }`}
                 >
-                  <span className="min-w-0 flex-1 break-words">{t.text}</span>
+                  <span className="jp-wrap min-w-0 flex-1">
+                    <Phrase text={t.text} />
+                  </span>
                   {t.drawn ? (
                     <DrawnBadge />
                   ) : (

@@ -6,10 +6,11 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { api, ApiError } from "@/lib/client/api";
 import { saveRoomSession } from "@/lib/client/storage";
-import type { DrawResult, RoomView } from "@/lib/rooms/types";
+import type { DrawResult, RevealItem, RoomPublicInfo, RoomView } from "@/lib/rooms/types";
 import { CardStage, type DrawnTopic } from "../CardStage";
 import { CopyField } from "../CopyField";
-import { JoinByCode } from "../JoinByCode";
+import { CardFront } from "../GachaCard";
+import { RoomNotFound } from "../LostCard";
 import { Phrase } from "../Phrase";
 import { BottomBar, Notice, RoomRules } from "./bits";
 import { RevealCountdown } from "./countdown";
@@ -24,7 +25,7 @@ const noop = () => () => {};
 const readHashKey = () => new URLSearchParams(window.location.hash.slice(1)).get("k");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-type Claim = { kind: "confirm" } | { kind: "invalid"; message: string };
+type Claim = { kind: "confirm" } | { kind: "invalid"; message: string } | { kind: "gone" };
 
 /** The host drives every change, so it only polls to see guests arrive and, rarely, to catch a reveal. */
 function hostPollMs(view: RoomView | null, due: boolean): number | null {
@@ -93,6 +94,10 @@ export function HostRoom({ code }: { code: string }) {
       .catch((e: unknown) => {
         if (cancelled) return;
         clearHash();
+        if (e instanceof ApiError && e.status === 404) {
+          setClaim({ kind: "gone" });
+          return;
+        }
         setClaim({
           kind: "invalid",
           message: e instanceof ApiError ? e.message : "リンクを確認できませんでした。電波のよい場所でもう一度開いてください。",
@@ -103,6 +108,28 @@ export function HostRoom({ code }: { code: string }) {
     };
   }, [hashKey, session, code, clearHash, takeOver]);
 
+  // A device that never joined this room: one lookup tells a missing room
+  // from someone else's. Only once, since a missing code counts against
+  // this network's limit on room lookups.
+  const [roomExists, setRoomExists] = useState<boolean | null>(null);
+  const lookUp = session === null && !hashKey && claim === null;
+  useEffect(() => {
+    if (!lookUp) return;
+    let cancelled = false;
+    api<RoomPublicInfo>(`/api/rooms/${encodeURIComponent(code)}/info`)
+      .then(() => {
+        if (!cancelled) setRoomExists(true);
+      })
+      .catch((e: unknown) => {
+        // Busy or offline: assume the room is there and show the notice.
+        if (!cancelled) setRoomExists(!(e instanceof ApiError && e.status === 404));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lookUp, code]);
+
+  if (claim?.kind === "gone") return <RoomNotFound />;
   if (claim?.kind === "invalid") {
     return (
       <Notice title="ホスト用リンクを使えませんでした" body={claim.message}>
@@ -139,16 +166,12 @@ export function HostRoom({ code }: { code: string }) {
   if (state.kind === "loading" || session === undefined || hashKey) {
     return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
   }
-  if (state.kind === "gone") {
-    return (
-      <Notice title="ルームが見つかりません" body={state.message} footer={<JoinByCode />}>
-        <Link href="/room/new" className="btn-primary">
-          新しいルームを作る
-        </Link>
-      </Notice>
-    );
-  }
+  if (state.kind === "gone") return <RoomNotFound />;
   if (state.kind === "no-session" || !session || state.view.role !== "host") {
+    if (session === null && roomExists === null) {
+      return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
+    }
+    if (session === null && roomExists === false) return <RoomNotFound />;
     return (
       <Notice
         title="この端末はホストではありません"
@@ -240,9 +263,12 @@ function Collecting({
   }
 
   return (
-    <div className="pb-52">
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-start lg:gap-16">
-        <section className="mx-auto w-full max-w-[22rem] text-center" aria-labelledby="qr-heading">
+    <div className="pb-52 lg:grid lg:grid-cols-[minmax(0,22rem)_1fr] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-16 lg:gap-y-8 lg:pb-0">
+      <div className="grid gap-10 lg:contents">
+        <section
+          className="mx-auto w-full max-w-[22rem] text-center lg:col-start-1 lg:row-span-2 lg:row-start-1"
+          aria-labelledby="qr-heading"
+        >
           <h1 id="qr-heading" className="font-display text-[1.6rem] leading-tight">
             QRを読み込んで、
             <br />
@@ -266,7 +292,7 @@ function Collecting({
           ) : null}
         </section>
 
-        <section className="grid gap-8" aria-label="受付の状況">
+        <section className="grid gap-8 lg:col-start-2 lg:row-start-2" aria-label="受付の状況">
           <div className="flex justify-center lg:justify-start">
             <RoomRules room={view.room} />
           </div>
@@ -285,8 +311,9 @@ function Collecting({
         </section>
       </div>
 
-      {/* Sticky so the counts and the start button are always in reach on a phone. */}
-      <BottomBar>
+      {/* Fixed so the counts and the start button are always in reach on a phone. On a
+          wide screen it heads the right column instead, clear of the URL field. */}
+      <BottomBar className="lg:static lg:z-auto lg:col-start-2 lg:row-start-1 lg:rounded-card lg:border lg:bg-ink-raised/60 lg:p-5 lg:backdrop-blur-none">
         <div className="flex items-baseline justify-center gap-x-5" aria-live="polite">
           <p className="flex items-baseline gap-1.5">
             <motion.span
@@ -431,7 +458,14 @@ function Drawing({
         : "ここで終わりにしました";
 
   return (
-    <div className={`flex flex-col items-center ${confirmEnd && !ended ? "pb-44" : ""}`}>
+    // A phone lying sideways has room for the card and its controls only: the
+    // screen does not scroll (the lamp behind the card would let it), the end
+    // button sits in the corner and the confirmation beside the card.
+    <div
+      className={`flex flex-col items-center short-landscape:-my-4 short-landscape:h-svh short-landscape:justify-center short-landscape:overflow-y-clip ${
+        confirmEnd && !ended ? "pb-44 short-landscape:pb-0" : ""
+      }`}
+    >
       <p className="mb-6 text-center text-sm text-text-dim tabular-nums short-landscape:sr-only">
         {ended
           ? `${room.drawCount}枚めくりました`
@@ -465,19 +499,19 @@ function Drawing({
       />
 
       {!ended && !confirmEnd ? (
-        <div className="mt-4 w-full max-w-xs text-center">
+        <div className="mt-4 w-full max-w-xs text-center short-landscape:fixed short-landscape:right-[max(0.5rem,env(safe-area-inset-right))] short-landscape:bottom-[max(0.25rem,env(safe-area-inset-bottom))] short-landscape:w-auto">
           <button type="button" className="btn-ghost min-h-11 text-sm" onClick={() => setConfirmEnd(true)}>
             ここで終わりにする
           </button>
         </div>
       ) : null}
 
-      <div className="mt-8">
+      <div className="mt-8 short-landscape:hidden">
         <HostLink code={room.code} token={token} />
       </div>
 
       {confirmEnd && !ended ? (
-        <BottomBar>
+        <BottomBar className="short-landscape:left-1/2 short-landscape:rounded-tl-card short-landscape:border-l">
           <p className="text-center text-sm font-bold">ここで終わりにして、せーので一覧を公開しますか？</p>
           <div className="grid grid-cols-[auto_1fr] gap-2">
             <button type="button" className="btn-quiet" onClick={() => setConfirmEnd(false)} disabled={busy}>
@@ -588,28 +622,39 @@ function Results({
         />
       ) : (
         <div className="mt-10">
-          <RevealList items={items} mine={view.myTopics.map((t) => t.id)} theme={ROOM_THEME} named={named} />
+          {/* Everyone at the table sees this screen: marking the host's own topics
+              would give away who wrote them, unless every name is out already. */}
+          <RevealList
+            items={items}
+            mine={named && shown >= total ? view.myTopics.map((t) => t.id) : []}
+            theme={ROOM_THEME}
+            named={named}
+          />
         </div>
       )}
 
-      <div className="mt-12 grid gap-3 sm:flex sm:flex-wrap">
-        <ShareListButton items={items} />
-        <MakeDeckButton items={items} />
-      </div>
-      <p className="mt-2 text-sm text-text-dim">デッキには名前を入れません。作るボタンを押すまで保存されません。</p>
-      <div className="mt-10 flex flex-wrap gap-3">
-        <Link href="/room/new" className="btn-primary">
-          もう1回ルームを作る
-        </Link>
-        <Link href="/" className="btn-quiet">
-          トップへ
-        </Link>
-      </div>
+      {mode === "list" ? (
+        <>
+          <div className="mt-12 grid gap-3 sm:flex sm:flex-wrap">
+            <ShareListButton items={items} />
+            <MakeDeckButton items={items} />
+          </div>
+          <p className="mt-2 text-sm text-text-dim">デッキには名前を入れません。作るボタンを押すまで保存されません。</p>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link href="/room/new" className="btn-primary">
+              もう1回ルームを作る
+            </Link>
+            <Link href="/" className="btn-quiet">
+              トップへ
+            </Link>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
 
-/** 答え合わせ on the host's phone: one topic at a time, everyone guesses, then 答え. */
+/** 答え合わせ on the host's phone: one topic at a time on its card, everyone guesses, then 答えを見る. */
 function Guess({
   items,
   cursor,
@@ -620,7 +665,7 @@ function Guess({
   onShowAll,
   error,
 }: {
-  items: { id: string; text: string; author: string | null }[];
+  items: RevealItem[];
   cursor: number;
   shown: number;
   busy: boolean;
@@ -642,11 +687,9 @@ function Guess({
         key={item.id}
         initial={reduce ? false : { opacity: 0, y: 12, rotate: -2 }}
         animate={{ opacity: 1, y: 0, rotate: 0 }}
-        className="grid min-h-48 w-full max-w-sm place-items-center rounded-card bg-paper px-6 py-8 text-paper-ink shadow-[0_24px_48px_-20px_rgb(0_0_0/0.85)]"
+        className="relative aspect-[5/7] w-[min(62vw,15rem)] rounded-card shadow-[0_24px_48px_-20px_rgb(0_0_0/0.85)] [@media(max-height:719.98px)]:w-[min(50vw,12rem)]"
       >
-        <p className="jp-wrap text-[clamp(1.35rem,6vw,1.8rem)] leading-snug font-black">
-          <Phrase text={item.text} />
-        </p>
+        <CardFront theme={ROOM_THEME} text={item.text} deckTitle="みんなの話題" order={item.order} rare={item.rare} />
       </motion.div>
       <div aria-live="polite">
         <p className="text-sm text-text-dim">書いたのは</p>
@@ -667,7 +710,7 @@ function Guess({
           </button>
         ) : (
           <button type="button" className="btn-primary min-h-14 text-[1.05rem]" onClick={onAnswer} disabled={busy}>
-            答え
+            答えを見る
           </button>
         )}
         {shown < items.length ? (

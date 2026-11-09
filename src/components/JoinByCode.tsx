@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Phrase } from "./Phrase";
 
 export function JoinByCode() {
   const router = useRouter();
@@ -17,7 +18,12 @@ export function JoinByCode() {
       className="flex items-end gap-2"
     >
       <label className="flex-1">
-        <span className="label">QRが読めないときは、ルームコードで参加</span>
+        {/* Breaks after 、 if at all, so 参加 is never left alone on a line. */}
+        <span className="label jp-wrap">
+          <Phrase text="QRが読めないときは、" />
+          <wbr />
+          <span className="inline-block">ルームコードで参加</span>
+        </span>
         <input
           className="field font-bold tracking-[0.25em] uppercase placeholder:tracking-normal"
           value={code}

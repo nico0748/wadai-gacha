@@ -22,7 +22,7 @@ test("creates a private deck, plays it by share link, and edits it", async ({ pa
   await expect(page.getByRole("heading", { name: "同期会" })).toBeVisible();
   await page.getByRole("button", { name: "カードをめくる", exact: true }).click();
   await page.getByRole("button", { name: "次のカードをめくる", exact: true }).click();
-  await expect(page.getByText("全2枚、引き終わりました")).toBeVisible();
+  await expect(page.getByText("全2枚、めくり終わりました")).toBeVisible();
 
   // Listed under 自分のデッキ on this device only.
   await page.goto("/decks");

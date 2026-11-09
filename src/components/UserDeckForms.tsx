@@ -140,7 +140,7 @@ export function EditUserDeck({ shareId, editKey }: { shareId: string; editKey: s
         <CopyField label="編集用URL（自分だけで保管）" value={editUrl} note="このURLを知っている人は誰でも内容を変更・削除できます。" />
         <div>
           <Link href={`/d/${shareId}`} className="btn-primary">
-            このデッキで引く
+            このデッキでめくる
           </Link>
         </div>
       </section>

@@ -9,7 +9,7 @@ import { api, ApiError } from "@/lib/client/api";
 import { LIMITS } from "@/lib/limits";
 import type { RevealItem, RoomPublicInfo, RoomView } from "@/lib/rooms/types";
 import { CardBack } from "../GachaCard";
-import { JoinByCode } from "../JoinByCode";
+import { RoomNotFound } from "../LostCard";
 import { Phrase } from "../Phrase";
 import { Notice, OwnTopicList, RoomRules, WaitingCards } from "./bits";
 import { RevealCountdown, useMsUntil } from "./countdown";
@@ -47,7 +47,7 @@ export function ParticipantRoom({ code }: { code: string }) {
     return <p className="py-20 text-center text-text-dim">読み込んでいます…</p>;
   }
   if (state.kind === "gone") {
-    return <RoomNotFound message={state.message} />;
+    return <RoomNotFound />;
   }
   if (!session || state.kind === "no-session") {
     return <JoinForm code={code} onJoined={join} />;
@@ -80,16 +80,6 @@ export function ParticipantRoom({ code }: { code: string }) {
         <Reveal view={view} />
       )}
     </div>
-  );
-}
-
-function RoomNotFound({ message }: { message: string }) {
-  return (
-    <Notice title="ルームが見つかりません" body={message} footer={<JoinByCode />}>
-      <Link href="/" className="btn-quiet">
-        トップへ
-      </Link>
-    </Notice>
   );
 }
 
@@ -133,7 +123,7 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
     !gone && (!data || Boolean(heldUntil) || answering),
   );
 
-  if (gone) return <RoomNotFound message={loadError.message} />;
+  if (gone) return <RoomNotFound />;
   if (!data && loadError) {
     return (
       <Notice title="つながりにくくなっています" body={`${loadError.message}（自動でつなぎ直します）`}>
