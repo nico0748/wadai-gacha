@@ -38,7 +38,7 @@ async function Loader({ params }: Pick<PageProps<"/d/[shareId]">, "params">) {
     <>
       <div className="mb-6 flex flex-col items-center gap-1 text-center short-landscape:sr-only">
         <h1 className="text-sm font-bold text-text-dim">{deck.title}</h1>
-        <ShareButton title={`${deck.title} | 話題ガチャ`} />
+        <ShareButton title={`${deck.title} | めくトーク`} />
       </div>
       <DeckPlayer deck={deck} />
     </>

@@ -144,7 +144,7 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
           <CardBack theme="candy" />
         </div>
       </div>
-      <h1 className="text-center font-display text-[1.7rem] leading-tight">話題ガチャに参加</h1>
+      <h1 className="text-center font-display text-[1.7rem] leading-tight">めくトークに参加</h1>
       <p className="mt-2 text-center text-text-dim">
         ルーム <span className="font-bold tracking-[0.15em] text-text">{code}</span>
         {info.status === "drawing" ? "（ガチャ中・投稿は締め切られています）" : null}

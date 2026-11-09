@@ -1,4 +1,4 @@
-# 話題ガチャ
+# めくトーク
 
 トークの話題をカードのガチャで引けるスマホ向けWebアプリ。飲み会や雑談の場で、ホストのスマホをテーブルに置いて使います。
 
@@ -28,12 +28,25 @@ http://localhost:3000 を開きます。データベースの準備は不要で�
 | `ADMIN_PASSWORD` | 任意 | 設定すると `/admin` の管理画面が使えるようになります。未設定なら管理画面は無効です。 |
 | `ADMIN_SESSION_SECRET` | 任意 | 管理画面のログインCookieの署名鍵。未設定ならパスワードから導出します（パスワードを変えると全員ログアウト）。 |
 | `PGLITE_DIR` | 任意 | PGliteの保存先（既定は `.data/pglite`）。 |
+| `SITE_URL` | 任意 | 公開URL（例：`https://mekutalk.example.com`）。SNSで共有したときの画像のURLに使います。Vercelでは未設定でも自動で入ります。 |
 
 ## デッキを編集する
 
 - **最初から入っているデッキ**：`src/data/decks/*.json` を編集してデプロイします。ファイル名がURLのID（`/decks/game` など）になります。新しいファイルを追加したら `src/lib/decks/builtin.ts` に登録してください。`theme` は `candy` `mint` `lemon` `sky` `rose` `grape` から選べます。
 - **管理画面のデッキ**：`/admin` から追加・編集・削除できます。デッキ一覧の最後に並びます。
 - **ユーザーが作るデッキ**：`/decks/new` から誰でも作れます。共有用URLを知っている人だけが遊べて、編集用URLを持っている人だけが変更できます。デッキ一覧には載りません。
+
+## ロゴとアイコン
+
+元の画像は [docs/brand](docs/brand) にあります。アプリで使っているのは、そこから書き出した次のファイルです。
+
+| ファイル | 用途 |
+| --- | --- |
+| `src/assets/mekutalk-title.png` | ヘッダーのタイトル（元画像を幅1200pxに縮小） |
+| `src/app/apple-icon.png` | iPhoneのホーム画面アイコン（180px） |
+| `public/icons/icon-*.png` | Androidのホーム画面アイコン（`src/app/manifest.ts` から参照） |
+| `src/app/icon.svg`、`src/app/favicon.ico` | ブラウザのタブのアイコン。16pxでも形がわかるよう、文字を省いたカードと吹き出しだけの版 |
+| `src/app/opengraph-image.png` | SNSで共有したときの画像（1200×630） |
 
 ## コマンド
 
