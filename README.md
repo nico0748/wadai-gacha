@@ -26,7 +26,7 @@ http://localhost:3000 を開きます。データベースの準備は不要で�
 | --- | --- | --- |
 | `DATABASE_URL` | 本番では必須 | PostgreSQLの接続URL（Supabase、Neonなど）。未設定ならPGliteを使います。テーブルは初回接続時に自動作成されます。 |
 | `ADMIN_PASSWORD` | 任意 | 設定すると `/admin` の管理画面が使えるようになります。未設定なら管理画面は無効です。 |
-| `ADMIN_SESSION_SECRET` | 任意 | 管理画面のログインCookieの署名鍵。未設定ならパスワードから導出します（パスワードを変えると全員ログアウト）。 |
+| `ADMIN_SESSION_SECRET` | 任意 | 管理画面のログインCookieの署名鍵。未設定なら初回にランダムな鍵を作ってデータベース（`app_secrets`）に保存し、パスワードと組み合わせて使います（パスワードを変えると全員ログアウト）。ログインは12時間で切れます。 |
 | `PGLITE_DIR` | 任意 | PGliteの保存先（既定は `.data/pglite`）。 |
 | `SITE_URL` | 任意 | 公開URL（例：`https://mekutalk.example.com`）。SNSで共有したときの画像のURLに使います。Vercelでは未設定でも自動で入ります。 |
 
