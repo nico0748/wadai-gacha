@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
-import { ADMIN_COOKIE, verifyAdminSession } from "./auth/admin";
+import { ADMIN_COOKIE, adminEnabled, verifyAdminSession } from "./auth/admin";
+import { getDb } from "./db";
 import { AppError } from "./errors";
 
 export function json(data: unknown, init?: ResponseInit): Response {
@@ -77,14 +78,15 @@ export async function readJson(req: Request): Promise<unknown> {
   return body;
 }
 
-export async function requireAdmin(): Promise<void> {
-  const store = await cookies();
-  if (!verifyAdminSession(store.get(ADMIN_COOKIE)?.value)) {
-    throw new AppError("unauthorized", "管理画面にログインしてください");
-  }
+export async function isAdmin(): Promise<boolean> {
+  if (!adminEnabled()) return false;
+  const value = (await cookies()).get(ADMIN_COOKIE)?.value;
+  // Visitors without the cookie never touch the database.
+  return value ? verifyAdminSession(await getDb(), value) : false;
 }
 
-export async function isAdmin(): Promise<boolean> {
-  const store = await cookies();
-  return verifyAdminSession(store.get(ADMIN_COOKIE)?.value);
+export async function requireAdmin(): Promise<void> {
+  if (!(await isAdmin())) {
+    throw new AppError("unauthorized", "管理画面にログインしてください");
+  }
 }
