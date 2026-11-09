@@ -1,7 +1,7 @@
 "use client";
 
 import { animate, AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "motion/react";
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type PointerEvent } from "react";
 import { themeOf } from "@/lib/decks/themes";
 import { CardBack, CardFront } from "./GachaCard";
 
@@ -43,6 +43,10 @@ const FIRST_ANTICIPATION_MS = 900;
 const RARE_EXTRA_MS = 400;
 /** The earliest the lifted card turns gold: once the lift has settled. */
 const GOLD_AFTER_MS = 380;
+/** How high the card rises and how much it grows while in the air, and the pop as it lands. */
+const LIFT = { y: -40, scale: 1.06, chargedY: -44, chargedScale: 1.09, land: 1.07, rareLand: 1.14 };
+/** In short landscape the card is nearly as tall as the screen: a smaller lift keeps its top (and the gold) in view. */
+const LOW_LIFT = { y: -12, scale: 1.02, chargedY: -14, chargedScale: 1.03, land: 1.03, rareLand: 1.05 };
 const BUZZ = [12, 60, 24];
 const RARE_BUZZ = [30, 50, 30, 50, 140];
 const LAMP = "var(--color-lamp)";
@@ -51,8 +55,24 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Whether a card has been turned over since the page loaded (survives a reshuffle). */
 let drewThisVisit = false;
 
+/** A phone lying sideways (the short-landscape variant in globals.css): the card is nearly as tall as the screen. */
+const SHORT_LANDSCAPE = "(orientation: landscape) and (max-height: 540px)";
+
+function useShortLandscape(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia(SHORT_LANDSCAPE);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(SHORT_LANDSCAPE).matches,
+    () => false,
+  );
+}
+
 export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blockedNote, initial }: CardStageProps) {
   const reduce = useReducedMotion();
+  const low = useShortLandscape();
   const [active, setActive] = useState<ActiveCard | null>(initial ? { key: 0, topic: initial, fresh: false } : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -170,12 +190,15 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
           <Confetti
             key={`confetti-${celebrate.key}`}
             rare={celebrate.rare}
-            colors={celebrate.rare ? GOLD : [t.from, LAMP, t.to, t.from, LAMP]}
+            // Colours that read on the dark table and against any deck's frame (not the deck's darker `to`).
+            colors={celebrate.rare ? GOLD : [t.from, LAMP, PAPER, ACCENT]}
           />
         ) : null}
 
         <AnimatePresence mode="popLayout">
-          {active ? <ActiveCardView key={active.key} card={active} theme={theme} deckTitle={deckTitle} reduce={!!reduce} /> : null}
+          {active ? (
+            <ActiveCardView key={active.key} card={active} theme={theme} deckTitle={deckTitle} reduce={!!reduce} low={low} />
+          ) : null}
         </AnimatePresence>
 
         {!active && pileCount === 0 ? (
@@ -202,7 +225,7 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
         ) : busy ? null : (
           <div className={`flex w-full justify-center ${active ? "note-in" : ""}`}>{blockedNote}</div>
         )}
-        <p className="text-sm text-text-dim tabular-nums">残り{remaining}枚</p>
+        {canDraw || remaining > 0 ? <p className="text-sm text-text-dim tabular-nums">残り{remaining}枚</p> : null}
         {error ? (
           <p role="alert" className="text-center text-sm font-bold text-danger">
             {error}
@@ -218,15 +241,19 @@ function ActiveCardView({
   theme,
   deckTitle,
   reduce,
+  low,
 }: {
   card: ActiveCard;
   theme: string;
   deckTitle?: string;
   reduce: boolean;
+  /** Short landscape: the card is nearly as tall as the screen, so it lifts and grows less. */
+  low: boolean;
 }) {
   const revealed = card.topic !== null;
   const rare = Boolean(card.topic?.rare);
   const charged = Boolean(card.charged);
+  const lift = low ? LOW_LIFT : LIFT;
 
   // Tilt that follows a mouse; on phones the card rocks once by itself after it lands.
   const px = useMotionValue(0.5);
@@ -268,7 +295,7 @@ function ActiveCardView({
             ? {
                 y: 0,
                 x: 0,
-                scale: rare ? [1.14, 1] : [1.07, 1],
+                scale: rare ? [lift.rareLand, 1] : [lift.land, 1],
                 rotateX: 0,
                 rotate: 0,
                 transition: { type: "spring", stiffness: 260, damping: rare ? 13 : 17 },
@@ -276,8 +303,8 @@ function ActiveCardView({
             : charged
               ? {
                   // Higher, brighter and shakier: something good is coming.
-                  y: -44,
-                  scale: 1.09,
+                  y: lift.chargedY,
+                  scale: lift.chargedScale,
                   rotateX: 8,
                   x: [0, -1.5, 1.5, -1.5, 1.5, 0],
                   rotate: [0, -1.6, 1.6, -1.6, 1.6, -1, 1, 0],
@@ -289,8 +316,8 @@ function ActiveCardView({
                   },
                 }
               : {
-                  y: [0, 4, -40],
-                  scale: [1, 0.98, 1.06],
+                  y: [0, 4, lift.y],
+                  scale: [1, 0.98, lift.scale],
                   rotateX: [0, 0, 8],
                   rotate: [0, -0.8, 0.8, -0.8, 0.8, -0.5, 0.5, 0],
                   transition: {
@@ -396,7 +423,15 @@ function Rays({ color }: { color: string }) {
   );
 }
 
-const GOLD = [LAMP, "var(--color-foil-light)", "var(--color-foil-deep)", LAMP];
+const PAPER = "var(--color-paper)";
+const ACCENT = "var(--color-accent)";
+const GOLD = [LAMP, "var(--color-foil-light)", PAPER, LAMP, "var(--color-foil-deep)"];
+
+/** Seconds each piece is in the air. */
+const FLIGHT = 1.7;
+/** The pieces off the top fly in front of the card this long, then behind it (they are clear of it by then). */
+const FRONT_S = 0.2;
+const SWAP = FRONT_S / FLIGHT;
 
 /** Deterministic noise, so server and client agree and every draw looks the same amount of random. */
 function noise(seed: number) {
@@ -405,36 +440,36 @@ function noise(seed: number) {
 }
 
 /**
- * Confetti that pops out from behind the card's edges and stays close to it:
- * on a phone the card fills the width, so the table shows only in narrow
- * strips beside it and a little above. Then gravity takes the pieces down the
- * sides. Start positions are in % of the card, distances in px.
+ * Confetti that pops out from the card's edges and stays close to it: on a
+ * phone the card fills the width, so the table shows only in narrow strips
+ * beside it and above it. A third burst off the top edge, in front of the
+ * card at first so they read; the rest come from behind the long sides. Then
+ * gravity takes them down behind and beside the card. Start positions are in
+ * % of the card, distances in px.
  */
 function makePieces(count: number, salt: number) {
   return Array.from({ length: count }, (_, i) => {
     const r = (k: number) => noise(i * 7.13 + k * 1.37 + salt);
-    // Mostly the two long sides, some off the top.
-    const side = i % 5 === 4 ? "top" : i % 2 ? "right" : "left";
+    const side = i % 3 === 2 ? "top" : i % 2 ? "right" : "left";
     const top = side === "top";
     const along = 0.08 + r(1) * 0.84;
-    const up = top ? -(26 + r(4) * 30) : -(30 + r(4) * 130);
-    const size = 10 + Math.round(r(5) * 6); // 10–16px
-    const round = r(6) < 0.3;
+    const up = top ? -(34 + r(4) * 34) : -(30 + r(4) * 130);
     return {
+      top,
       sx: top ? along * 100 : side === "left" ? 2 : 98,
-      sy: top ? 2 : 10 + along * 80,
+      sy: top ? 0 : 10 + along * 80,
       x: top ? (along - 0.5) * 90 : (side === "left" ? -1 : 1) * (12 + r(2) * 26),
       up,
       fall: up + (top ? 180 : 250) + r(7) * 160,
       spin: (r(8) < 0.5 ? 1 : -1) * (200 + r(9) * 420),
-      w: round ? size * 0.7 : size,
-      h: round ? size * 0.7 : Math.max(5, size * 0.45),
-      round,
+      grain: r(5),
+      round: r(6) < 0.3,
       flutter: 0.35 + r(10) * 0.3,
       delay: 0.08 + r(11) * 0.12,
     };
   });
 }
+type PieceSpec = ReturnType<typeof makePieces>[number];
 const PIECES = makePieces(48, 0);
 const RARE_PIECES = makePieces(72, 31);
 
@@ -447,47 +482,66 @@ function sideReach() {
 
 function Confetti({ colors, rare }: { colors: string[]; rare: boolean }) {
   const [done, setDone] = useState(false);
-  // Only ever mounted by a draw in the browser, never on the server.
-  const [reach] = useState(sideReach);
+  // Only ever mounted by a draw in the browser, never on the server. On a
+  // narrow screen the pieces are bigger, since only a little of each shows.
+  const [view] = useState(() => ({ reach: sideReach(), big: window.innerWidth < 640 }));
   useEffect(() => {
     const id = setTimeout(() => setDone(true), 2100);
     return () => clearTimeout(id);
   }, []);
   if (done) return null;
   const pieces = rare ? RARE_PIECES : PIECES;
+  const piece = (p: PieceSpec, i: number, front: boolean) => (
+    <Piece key={i} p={p} color={colors[i % colors.length]} reach={view.reach} big={view.big} front={front} />
+  );
   return (
-    // Under the active card (z-20), over the pile.
-    <div className="pointer-events-none absolute inset-0 z-[15]" aria-hidden="true">
-      {pieces.map((p, i) => (
-        <motion.span
-          key={i}
-          className={`absolute ${p.round ? "rounded-full" : "rounded-[2px]"}`}
-          style={{
-            left: `${p.sx}%`,
-            top: `${p.sy}%`,
-            width: p.w,
-            height: p.h,
-            marginLeft: -p.w / 2,
-            marginTop: -p.h / 2,
-            background: colors[i % colors.length],
-          }}
-          initial={{ x: 0, y: 0, opacity: 0, rotate: 0, scaleY: 1 }}
-          animate={{
-            x: [0, p.x * reach * 0.75, p.x * reach],
-            y: [0, p.up, p.fall],
-            opacity: [0, 1, 1, 0],
-            rotate: p.spin,
-            scaleY: [1, -1, 1, -1, 1],
-          }}
-          transition={{
-            x: { duration: 1.7, delay: p.delay, ease: "easeOut" },
-            y: { duration: 1.7, delay: p.delay, times: [0, 0.3, 1], ease: ["easeOut", "easeIn"] },
-            opacity: { duration: 1.7, delay: p.delay, times: [0, 0.04, 0.72, 1] },
-            rotate: { duration: 1.7, delay: p.delay, ease: "linear" },
-            scaleY: { duration: p.flutter * 4, delay: p.delay, ease: "linear" },
-          }}
-        />
-      ))}
-    </div>
+    <>
+      {/* Under the active card (z-20), over the pile. */}
+      <div className="pointer-events-none absolute inset-0 z-[15]" aria-hidden="true">
+        {pieces.map((p, i) => piece(p, i, false))}
+      </div>
+      {/* The same pieces off the top, over the card for their first FRONT_S. */}
+      <div className="pointer-events-none absolute inset-0 z-[25]" aria-hidden="true">
+        {pieces.map((p, i) => (p.top ? piece(p, i, true) : null))}
+      </div>
+    </>
+  );
+}
+
+function Piece({ p, color, reach, big, front }: { p: PieceSpec; color: string; reach: number; big: boolean; front: boolean }) {
+  const size = (big ? 12 : 10) + Math.round(p.grain * 6); // 12–18px on a phone, 10–16px wider
+  const w = p.round ? size * 0.7 : size;
+  const h = p.round ? size * 0.7 : Math.max(5, size * 0.45);
+  // A piece off the top shows in front until SWAP, then its copy behind the card takes over.
+  const opacity = front ? [0, 1, 1, 0, 0] : p.top ? [0, 0, 1, 1, 0] : [0, 1, 1, 0];
+  const times = front ? [0, 0.04, SWAP, SWAP + 0.005, 1] : p.top ? [0, SWAP, SWAP + 0.005, 0.72, 1] : [0, 0.04, 0.72, 1];
+  return (
+    <motion.span
+      className={`absolute ${p.round ? "rounded-full" : "rounded-[2px]"}`}
+      style={{
+        left: `${p.sx}%`,
+        top: `${p.sy}%`,
+        width: w,
+        height: h,
+        marginLeft: -w / 2,
+        marginTop: -h / 2,
+        background: color,
+      }}
+      initial={{ x: 0, y: 0, opacity: 0, rotate: 0, scaleY: 1 }}
+      animate={{
+        x: [0, p.x * reach * 0.75, p.x * reach],
+        y: [0, p.up, p.fall],
+        opacity,
+        rotate: p.spin,
+        scaleY: [1, -1, 1, -1, 1],
+      }}
+      transition={{
+        x: { duration: FLIGHT, delay: p.delay, ease: "easeOut" },
+        y: { duration: FLIGHT, delay: p.delay, times: [0, 0.3, 1], ease: ["easeOut", "easeIn"] },
+        opacity: { duration: FLIGHT, delay: p.delay, times },
+        rotate: { duration: FLIGHT, delay: p.delay, ease: "linear" },
+        scaleY: { duration: p.flutter * 4, delay: p.delay, ease: "linear" },
+      }}
+    />
   );
 }

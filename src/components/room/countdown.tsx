@@ -40,14 +40,27 @@ export function RevealCountdown({ revealAt, offsetMs }: { revealAt: string | nul
   if (ms === null || ms > SHOW_FROM_MS) return null;
 
   const step = ms > 3000 ? "ready" : ms > 0 ? String(Math.ceil(ms / 1000)) : "open";
+  const digit = step !== "ready" && step !== "open";
   return (
+    // Nearly opaque: the card behind must not show through the digits.
     <div
       role="status"
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/88 px-6 text-center backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-ink/95 px-6 text-center backdrop-blur-md"
     >
       <div className="grid justify-items-center gap-4">
         <p className="text-lg font-black text-text-dim">みんなで一緒に公開します</p>
-        <div className="grid h-[clamp(8rem,42vw,13rem)] place-items-center">
+        <div className="relative grid h-[clamp(8rem,42vw,13rem)] place-items-center">
+          {/* A ring of lamp light goes out with each number, like a beat. */}
+          {digit && !reduce ? (
+            <motion.span
+              key={`ring-${step}`}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 m-auto aspect-square h-full rounded-full border-[3px] border-lamp"
+              initial={{ scale: 0.5, opacity: 0.75 }}
+              animate={{ scale: 1.3, opacity: 0 }}
+              transition={{ duration: 0.9, ease: "easeOut" }}
+            />
+          ) : null}
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.p
               key={step}
@@ -55,10 +68,8 @@ export function RevealCountdown({ revealAt, offsetMs }: { revealAt: string | nul
               animate={{ scale: 1, opacity: 1 }}
               exit={reduce ? { opacity: 0 } : { scale: 0.7, opacity: 0 }}
               transition={{ type: "spring", stiffness: 320, damping: 20 }}
-              className={`font-display leading-none text-lamp tabular-nums ${
-                step === "ready" || step === "open"
-                  ? "text-[clamp(2.6rem,13vw,4.5rem)]"
-                  : "text-[clamp(7rem,40vw,12rem)]"
+              className={`relative font-display leading-none text-lamp ${
+                digit ? "text-[clamp(7rem,40vw,12rem)]" : "text-[clamp(2.6rem,13vw,4.5rem)]"
               }`}
             >
               {step === "ready" ? "せーの" : step === "open" ? "オープン！" : step}
