@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { api } from "@/lib/client/api";
 import { LIMITS } from "@/lib/limits";
 import type { OwnTopic } from "@/lib/rooms/types";
+import { DrawnBadge } from "./bits";
 
 const IDEAS = ["最近ハマっていることは？", "子どもの頃の夢は？", "人生で一番おいしかったもの", "最近買ってよかったもの"];
 
@@ -107,18 +108,22 @@ export function TopicComposer({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={reduce ? { opacity: 0 } : { opacity: 0, x: 40 }}
                   className={`flex items-center gap-3 rounded-[0.8rem] border bg-ink-raised px-4 py-2.5 ${
-                    justAdded === t.id ? "border-accent/60" : "border-line/70"
+                    t.drawn ? "border-lamp/50" : justAdded === t.id ? "border-accent/60" : "border-line/70"
                   }`}
                 >
                   <span className="min-w-0 flex-1 break-words">{t.text}</span>
-                  <button
-                    type="button"
-                    className="-my-1.5 -mr-2 inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-xs font-bold text-text-dim hover:text-text"
-                    onClick={() => remove(t.id)}
-                    aria-label={`「${t.text}」を取り消す`}
-                  >
-                    取り消す
-                  </button>
+                  {t.drawn ? (
+                    <DrawnBadge />
+                  ) : (
+                    <button
+                      type="button"
+                      className="-my-1.5 -mr-2 inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-xs font-bold text-text-dim hover:text-text"
+                      onClick={() => remove(t.id)}
+                      aria-label={`「${t.text}」を取り消す`}
+                    >
+                      取り消す
+                    </button>
+                  )}
                 </motion.li>
               ))}
             </AnimatePresence>

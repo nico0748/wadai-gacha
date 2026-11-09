@@ -103,7 +103,7 @@ export function NewRoomForm() {
           value="all"
           current={endMode}
           onChange={setEndMode}
-          title="全部引き終わるまで"
+          title="全部めくり終わるまで"
           body="集まった話題を最後の1枚まで。途中でホストが終了することもできます。"
         />
         <Choice
@@ -111,8 +111,8 @@ export function NewRoomForm() {
           value="count"
           current={endMode}
           onChange={setEndMode}
-          title="引く回数を決める"
-          body="決めた回数を引いたら終了。話題がたくさん集まりそうなときに。"
+          title="めくる回数を決める"
+          body="決めた回数をめくったら終了。話題がたくさん集まりそうなときに。"
         >
           <label className="flex items-center gap-3">
             <input
@@ -125,7 +125,7 @@ export function NewRoomForm() {
               className="field w-24 text-center font-bold"
               required
             />
-            <span className="font-bold">回引いたら終了</span>
+            <span className="font-bold">回めくったら終了</span>
           </label>
         </Choice>
       </fieldset>
@@ -177,11 +177,14 @@ export function NewRoomForm() {
         </p>
       ) : null}
 
-      <div>
+      {/* On a phone the button stays in reach at the bottom while the choices scroll. */}
+      <div className="sticky bottom-0 z-30 -mx-4 border-t border-line/70 bg-ink/92 px-4 pt-3 pb-[max(0.9rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <button type="submit" className="btn-primary min-h-14 w-full text-[1.05rem] sm:w-auto sm:min-w-64" disabled={busy}>
           {busy ? "作っています…" : "ルームを作ってQRを出す"}
         </button>
-        <p className="mt-3 text-sm text-text-dim">ルームは{LIMITS.roomTtlHours}時間後に自動で削除されます。</p>
+        <p className="mt-2 text-center text-xs text-text-dim sm:mt-3 sm:text-left sm:text-sm">
+          ルームは{LIMITS.roomTtlHours}時間後に自動で削除されます。
+        </p>
       </div>
     </form>
   );
