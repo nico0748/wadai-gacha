@@ -138,8 +138,12 @@ describe("guardRoomAccess", () => {
 describe("clientIp", () => {
   const req = (headers: Record<string, string>) => new Request("http://localhost/api", { headers });
 
-  it("uses the first forwarded address, then X-Real-IP", () => {
-    expect(clientIp(req({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" }))).toBe("203.0.113.7");
+  it("uses the address the nearest trusted proxy saw, then X-Real-IP", () => {
+    expect(clientIp(req({ "x-forwarded-for": "203.0.113.7" }))).toBe("203.0.113.7");
+    // A client-supplied entry comes first and is ignored.
+    expect(clientIp(req({ "x-forwarded-for": "6.6.6.6, 203.0.113.7" }))).toBe("203.0.113.7");
+    expect(clientIp(req({ "x-forwarded-for": "6.6.6.6, 203.0.113.7, 10.0.0.1" }), 2)).toBe("203.0.113.7");
+    expect(clientIp(req({ "x-forwarded-for": "203.0.113.7" }), 3)).toBe("203.0.113.7");
     expect(clientIp(req({ "x-real-ip": "198.51.100.2" }))).toBe("198.51.100.2");
     expect(clientIp(req({}))).toBe("unknown");
   });

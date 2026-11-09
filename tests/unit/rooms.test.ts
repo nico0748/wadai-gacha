@@ -136,6 +136,14 @@ describe("room lifecycle", () => {
     expect(view.reveal).toEqual([{ id: expect.any(String), text: "X", order: null, rare: false, author: null }]);
   });
 
+  it("opens a held list before the room expires", async () => {
+    const host = await createRoom(db, {});
+    await addTopic(db, host.code, host.token, { text: "X" });
+    await db.query("UPDATE rooms SET expires_at = now() + interval '5 minutes' WHERE code = $1", [host.code]);
+    const ended = await endRoom(db, host.code, host.token);
+    expect(secondsBetween(ended.revealAt!, ended.serverNow)).toBeCloseTo(4 * 60, -1);
+  });
+
   it("holds the list for the hold time when the host ends without せーの", async () => {
     const host = await createRoom(db, {});
     await addTopic(db, host.code, host.token, { text: "X" });
@@ -347,6 +355,16 @@ describe("drawing", () => {
     await expectAppError(drawCard(db, host.code, host.token, { expectedOrder: 3 }), "conflict");
   });
 
+  it("refuses a draw from a device that is behind instead of replaying an old card", async () => {
+    const host = await createRoom(db, {});
+    for (const text of ["a", "b", "c", "d"]) await addTopic(db, host.code, host.token, { text });
+    await startDrawing(db, host.code, host.token);
+    for (let order = 1; order <= 3; order++) await drawCard(db, host.code, host.token, { expectedOrder: order });
+    // A second host device last saw one card and asks for the second.
+    await expectAppError(drawCard(db, host.code, host.token, { expectedOrder: 2 }), "conflict");
+    expect((await getRoomView(db, host.code, host.token)).room.drawCount).toBe(3);
+  });
+
   it("stores rare draws and keeps them on reload", async () => {
     const host = await createRoom(db, {});
     for (const text of ["a", "b", "c"]) await addTopic(db, host.code, host.token, { text });
@@ -479,7 +497,10 @@ describe("room rules", () => {
     const p = await joinRoom(db, host.code, { nickname: "P" });
     const mine = await addTopic(db, host.code, p.token, { text: "mine" });
     const hosts = await addTopic(db, host.code, host.token, { text: "host's" });
-    await expectAppError(deleteTopic(db, host.code, p.token, hosts.id), "not_found");
+    await deleteTopic(db, host.code, p.token, hosts.id);
+    expect((await getRoomView(db, host.code, host.token)).myTopics.map((t) => t.id)).toEqual([hosts.id]);
+    await deleteTopic(db, host.code, p.token, mine.id);
+    // A double tap is not an error.
     await deleteTopic(db, host.code, p.token, mine.id);
     expect((await getRoomView(db, host.code, p.token)).myTopics).toEqual([]);
   });

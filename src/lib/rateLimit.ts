@@ -14,8 +14,12 @@ export const RATE_LIMITS = {
   // The join screen of an ended room polls this every 2.5s while the list is
   // held back, so leave room for several phones behind one address.
   roomInfo: { limit: 120, windowSeconds: 60 },
-  /** Lookups of a room that does not exist (join or info): code guessing. */
-  roomMiss: { limit: 20, windowSeconds: 10 * 60 },
+  /**
+   * Lookups of a room that does not exist: code guessing. Codes are 6 of 31
+   * characters (about 9×10^8), so even this leaves guessing hopeless, while
+   * typos and stale QR codes from a whole bar's shared address fit easily.
+   */
+  roomMiss: { limit: 60, windowSeconds: 10 * 60 },
   topicWrite: { limit: 120, windowSeconds: 60 },
   deckCreate: { limit: 30, windowSeconds: 60 * 60 },
   deckEdit: { limit: 120, windowSeconds: 60 * 60 },
@@ -122,14 +126,29 @@ export async function guardRoomAccess<T>(db: Db, ip: string, action: () => Promi
 }
 
 /**
- * The address to rate limit by: the first X-Forwarded-For entry (set by the
- * hosting proxy, e.g. Vercel), else X-Real-IP. IPv6 addresses are grouped by
- * their /64, since one phone or home usually gets a whole /64.
+ * The address to rate limit by. Proxies append the address they saw to
+ * X-Forwarded-For, so only the last TRUSTED_PROXY_HOPS entries (default 1)
+ * were written by a proxy; anything before them came from the client and can
+ * be forged. Vercel replaces the header with the real address, so the default
+ * fits it, a single nginx, ALB or Cloudflare in front, and `next start`
+ * behind such a proxy. Without any proxy, a client can pick its own address:
+ * the README says to put one in front when self-hosting. X-Real-IP is only a
+ * fallback. IPv6 addresses are grouped by their /64, since one phone or home
+ * usually gets a whole /64.
  */
-export function clientIp(req: Request): string {
-  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+export function clientIp(req: Request, hops = trustedProxyHops()): string {
+  const entries = (req.headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+  const forwarded = entries.length ? entries[Math.max(0, entries.length - hops)] : undefined;
   const ip = (forwarded || req.headers.get("x-real-ip")?.trim() || "unknown").slice(0, 64);
   return ip.includes(":") ? ipv6Prefix(ip) : ip;
+}
+
+function trustedProxyHops(): number {
+  const n = Number(process.env.TRUSTED_PROXY_HOPS);
+  return Number.isInteger(n) && n >= 1 && n <= 10 ? n : 1;
 }
 
 function ipv6Prefix(raw: string): string {

@@ -352,12 +352,13 @@ export async function deleteTopic(db: Db, code: string, token: string | null, to
     if (room.status !== "collecting") {
       throw new AppError("conflict", "受付が締め切られたあとは取り消せません");
     }
+    // Deleting a topic that is already gone (a double tap) or not yours
+    // changes nothing and is not an error.
     const rows = await tx.query(
       "DELETE FROM room_topics WHERE id = $1 AND room_code = $2 AND participant_id = $3 RETURNING id",
       [topicId, room.code, me.id],
     );
-    if (rows.length === 0) throw new AppError("not_found", "トピックが見つかりません");
-    await bumpVersion(tx, room.code);
+    if (rows.length > 0) await bumpVersion(tx, room.code);
   });
 }
 
@@ -394,7 +395,12 @@ export async function drawCard(
     const me = await authenticate(tx, room, token);
     requireHost(me);
 
-    if (expectedOrder !== undefined && room.draw_count >= expectedOrder) {
+    // An older draw than the latest: this device is behind (another host
+    // device drew meanwhile). Replaying it would look like a new card.
+    if (expectedOrder !== undefined && expectedOrder < room.draw_count) {
+      throw new AppError("conflict", "ほかの端末でめくられていました。画面を新しくします");
+    }
+    if (expectedOrder !== undefined && room.draw_count === expectedOrder) {
       const rows = await tx.query<{ id: string; text: string; order: number; rare: boolean }>(
         `SELECT id, text, drawn_order AS "order", rare FROM room_topics
          WHERE room_code = $1 AND drawn_order = $2`,
@@ -440,7 +446,7 @@ export async function drawCard(
          misses_since_rare = CASE WHEN $4::boolean THEN 0 ELSE misses_since_rare + 1 END,
          status = CASE WHEN $3::boolean THEN 'ended' ELSE status END,
          ended_at = CASE WHEN $3::boolean THEN now() ELSE ended_at END,
-         reveal_at = CASE WHEN $3::boolean THEN now() + make_interval(mins => $5) ELSE reveal_at END
+         reveal_at = CASE WHEN $3::boolean THEN ${HOLD_UNTIL("$5")} ELSE reveal_at END
        WHERE code = $1
        RETURNING reveal_at`,
       [room.code, order, ended, rare, REVEAL_HOLD_MINUTES],
@@ -449,6 +455,14 @@ export async function drawCard(
     return { card, remaining, ended, revealAt: iso(updated.reveal_at) };
   });
 }
+
+/**
+ * SQL for when a held list opens by itself: REVEAL_HOLD_MINUTES (the given
+ * parameter) after the end, but always a minute before the room expires, so
+ * a room ended late in its life is not deleted with its list unseen.
+ */
+const HOLD_UNTIL = (minutesParam: string) =>
+  `GREATEST(now(), LEAST(now() + make_interval(mins => ${minutesParam}), expires_at - interval '1 minute'))`;
 
 /** Moves the release to a few seconds from now, unless it is already sooner. */
 async function startCountdown(db: Db, code: string) {
@@ -481,7 +495,7 @@ export async function endRoom(db: Db, code: string, token: string | null, input:
     if (room.status !== "ended") {
       await tx.query(
         `UPDATE rooms SET status = 'ended', ended_at = now(),
-           reveal_at = now() + make_interval(mins => $2), version = version + 1
+           reveal_at = ${HOLD_UNTIL("$2")}, version = version + 1
          WHERE code = $1`,
         [room.code, REVEAL_HOLD_MINUTES],
       );

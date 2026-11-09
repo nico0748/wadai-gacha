@@ -24,10 +24,11 @@ http://localhost:3000 を開きます。データベースの準備は不要で�
 
 | 変数 | 必須 | 説明 |
 | --- | --- | --- |
-| `DATABASE_URL` | 本番では必須 | PostgreSQLの接続URL（Supabase、Neonなど）。未設定ならPGliteを使います。テーブルは初回接続時に自動作成されます。 |
+| `DATABASE_URL` | 本番では必須 | PostgreSQLの接続URL（Supabase、Neonなど）。未設定ならPGliteを使います。テーブルは起動時に自動で作成・更新されます（`src/lib/db/migrations.ts`）。 |
 | `ADMIN_PASSWORD` | 任意 | 設定すると `/admin` の管理画面が使えるようになります。未設定なら管理画面は無効です。 |
 | `ADMIN_SESSION_SECRET` | 任意 | 管理画面のログインCookieの署名鍵。未設定なら初回にランダムな鍵を作ってデータベース（`app_secrets`）に保存し、パスワードと組み合わせて使います（パスワードを変えると全員ログアウト）。ログインは12時間で切れます。 |
 | `PGLITE_DIR` | 任意 | PGliteの保存先（既定は `.data/pglite`）。 |
+| `TRUSTED_PROXY_HOPS` | 任意 | アクセス元の判定に使うプロキシの段数（既定は1）。レート制限は `X-Forwarded-For` の右からこの数番目をアクセス元とみなします。Vercelや、nginx・ALB・Cloudflareを1段挟む構成は既定のままで大丈夫です。2段挟むときは2に。 |
 | `SITE_URL` | 任意 | 公開URL（例：`https://mekutalk.example.com`）。SNSで共有したときの画像のURLに使います。Vercelでは未設定でも自動で入ります。 |
 
 ## デッキを編集する
@@ -61,6 +62,9 @@ http://localhost:3000 を開きます。データベースの準備は不要で�
 ## デプロイ
 
 Vercelなどのサーバーレス環境では、ファイルシステムが永続化されないため必ず `DATABASE_URL` を設定してください。PGliteはローカル開発と1台構成のサーバー向けです。
+
+- 自分のサーバーで動かすときは、`next start` を直接公開せず、`X-Forwarded-For` にアクセス元を書き込むプロキシ（nginxなど）を前に置いてください。直接公開すると、アクセス元を偽ってレート制限をすり抜けられます。
+- データベースの変更は起動時に自動で入ります（足すだけなので、古いサーバーが同じデータベースを使っていても壊れません）。ただし第1弾（MVP）のサーバーは「終了＝公開」とみなすため、第2弾で公開待ちのルームの一覧をルームコードだけで見せてしまいます。同じ `DATABASE_URL` を使う第1弾のデプロイ（Vercelの古いデプロイのURLを含む）は、切り替えたら止めるか、Deployment Protectionで保護してください。
 
 ## 構成
 
