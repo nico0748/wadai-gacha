@@ -62,7 +62,7 @@ export function RevealList({
   return (
     <div className="grid gap-12">
       <section aria-labelledby="reveal-undrawn" hidden={undrawn.length === 0}>
-        <h2 id="reveal-undrawn" className="flex items-baseline justify-between text-lg font-black">
+        <h2 id="reveal-undrawn" className="flex items-baseline justify-between text-lg font-display font-semibold tracking-[0.06em]">
           <span>出番がなかった話題</span>
           <span className="text-sm font-bold text-text-dim tabular-nums">{undrawn.length}件</span>
         </h2>
@@ -85,10 +85,12 @@ export function RevealList({
                     style={{
                       backfaceVisibility: "hidden",
                       WebkitBackfaceVisibility: "hidden",
-                      boxShadow: `inset 0 0 0 1px ${t.from}66, inset 0 0 0 4px rgb(255 250 240), inset 0 0 0 5px ${t.to}33, 0 12px 24px -14px rgb(0 0 0 / 0.85)`,
+                      // The gold rule inside the edge, as on the drawn card.
+                      boxShadow:
+                        "inset 0 0 0 4px var(--color-paper), inset 0 0 0 5px color-mix(in srgb, var(--color-foil-deep) 50%, transparent), 0 12px 24px -14px rgb(0 0 0 / 0.85)",
                     }}
                   >
-                    <p className="jp-wrap flex-1 text-[0.98rem] leading-snug font-bold">
+                    <p className="jp-wrap flex-1 font-display text-[0.98rem] leading-snug font-semibold">
                       <Phrase text={item.text} />
                     </p>
                     {meta(item, true, delay + FLIP_DURATION / 2 + AUTHOR_LAG)}
@@ -113,7 +115,7 @@ export function RevealList({
       </section>
 
       <section aria-labelledby="reveal-drawn">
-        <h2 id="reveal-drawn" className="flex items-baseline justify-between text-lg font-black">
+        <h2 id="reveal-drawn" className="flex items-baseline justify-between text-lg font-display font-semibold tracking-[0.06em]">
           <span>めくった話題</span>
           <span className="text-sm font-bold text-text-dim tabular-nums">{drawn.length}件</span>
         </h2>
@@ -125,14 +127,14 @@ export function RevealList({
                 className="flex items-start gap-4 rounded-[0.9rem] bg-ink-raised py-3 pr-4 pl-3 ring-1 ring-white/12"
               >
                 <span
-                  className="relative grid h-11 w-11 shrink-0 place-items-center rounded-[0.65rem] font-display text-[1.1rem] text-white"
+                  className="relative grid h-11 w-11 shrink-0 place-items-center rounded-[0.65rem] font-latin text-[1.3rem] font-medium text-foil-light italic ring-1 ring-accent/45 ring-inset"
                   style={{ background: `linear-gradient(150deg, ${t.from}, ${t.to})` }}
                 >
                   <span className="sr-only">{item.order}枚目</span>
                   <span aria-hidden="true">{item.order}</span>
                   {item.rare ? (
                     <span
-                      className="absolute -top-1.5 -right-1.5 grid h-5 w-5 place-items-center rounded-full bg-lamp text-[0.7rem] leading-none text-ink"
+                      className="absolute -top-1.5 -right-1.5 grid h-5 w-5 place-items-center rounded-full bg-lamp text-[0.65rem] leading-none text-ink not-italic"
                       title="レア"
                     >
                       <span aria-hidden="true">★</span>

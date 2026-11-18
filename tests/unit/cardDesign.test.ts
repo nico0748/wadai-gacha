@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { loadDefaultJapaneseParser } from "budoux";
 import { describe, expect, it } from "vitest";
 import engineer from "@/data/decks/engineer.json";
@@ -8,12 +10,10 @@ import shotaimen from "@/data/decks/shotaimen.json";
 import zatsudan from "@/data/decks/zatsudan.json";
 import { DECK_THEMES } from "@/lib/decks/themes";
 import {
-  bandColors,
   breakScore,
   contrast,
   longestPieceEms,
   phrases,
-  shadeForWhite,
   textEms,
   topicPieces,
   topicSize,
@@ -121,14 +121,14 @@ describe("topicPieces", () => {
 
 describe("topicSize", () => {
   it("keeps the length tiers as the upper bound", () => {
-    expect(topicSize("自分の名前の由来")).toBe("15cqi");
-    expect(cqi(topicSize("朝型？夜型？"))).toBeLessThanOrEqual(15);
-    expect(cqi(topicSize("自分を動物にたとえると？"))).toBeLessThanOrEqual(12);
+    expect(topicSize("自分の名前の由来")).toBe("13cqi");
+    expect(cqi(topicSize("朝型？夜型？"))).toBeLessThanOrEqual(13);
+    expect(cqi(topicSize("自分を動物にたとえると？"))).toBeLessThanOrEqual(10.5);
     expect(cqi(topicSize("あ".repeat(80)))).toBeLessThanOrEqual(7.6);
   });
 
   it("shrinks until the longest piece fits one line", () => {
-    // 徹夜してしまった is 8 characters: 82 / 8 = 10.25cqi, below the 12cqi tier.
+    // 徹夜してしまった is 8 characters: 82 / 8 = 10.25cqi, below the 10.5cqi tier.
     expect(topicSize("徹夜してしまったゲームは？")).toBe("10.25cqi");
     for (const text of ALL_CARDS) {
       expect(cqi(topicSize(text)) * longestPieceEms(text)).toBeLessThanOrEqual(82.01);
@@ -136,8 +136,8 @@ describe("topicSize", () => {
   });
 
   it("keeps topics with one long phrase big", () => {
-    expect(topicSize("好きな恋愛映画・ドラマ・マンガは？")).toBe("12cqi");
-    expect(cqi(topicSize("一度だけやったことがある、珍しい体験"))).toBeGreaterThan(11);
+    expect(topicSize("好きな恋愛映画・ドラマ・マンガは？")).toBe("10.5cqi");
+    expect(cqi(topicSize("一度だけやったことがある、珍しい体験"))).toBeGreaterThanOrEqual(10.5);
     expect(cqi(topicSize("一晩だけ貸し切れるなら、どこにする？"))).toBeGreaterThan(10);
     for (const text of ALL_CARDS) expect(cqi(topicSize(text)), text).toBeGreaterThanOrEqual(8);
   });
@@ -152,43 +152,30 @@ describe("topicSize", () => {
   });
 });
 
-describe("band colours", () => {
-  /** HSL hue in degrees of a #rrggbb colour. */
-  const hue = (hex: string) => {
-    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
-    const max = Math.max(r, g, b);
-    const d = max - Math.min(r, g, b);
-    const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    return (h * 60 + 360) % 360;
-  };
+describe("card colours", () => {
+  const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+  const token = (name: string) => css.match(new RegExp(`--color-${name}:\\s*(#[0-9a-f]{6})`))![1];
 
-  it("keeps the band text readable (4.5:1) on both ends of the band on every deck theme", () => {
+  it("keeps the deck name on the card back readable (4.5:1) on both ends of every deck colour", () => {
     for (const t of Object.values(DECK_THEMES)) {
-      const band = bandColors(t);
-      const stops = band.background.match(/#[0-9a-f]{6}/g)!;
-      expect(band.background).toMatch(/^linear-gradient\(/);
-      expect(stops).toHaveLength(2);
-      for (const stop of stops) expect(contrast(stop, band.color)).toBeGreaterThanOrEqual(4.5);
+      for (const stop of [t.from, t.to]) expect(contrast(stop, token("foil-light")), `${t.name} ${stop}`).toBeGreaterThanOrEqual(4.5);
     }
   });
 
-  it("keeps a light deck's own colours, with ink text, when the ink reads on both ends", () => {
-    const light = { from: "#f6d365", to: "#fda085", ink: "#3a2306" };
-    expect(bandColors(light)).toEqual({ background: `linear-gradient(110deg, ${light.from}, ${light.to})`, color: light.ink });
-  });
-
-  it("deepens a colour for white text without changing its hue", () => {
+  it("keeps the brass monogram and frame visible (3:1) on every deck colour", () => {
     for (const t of Object.values(DECK_THEMES)) {
-      for (const c of [t.from, t.to]) {
-        const shade = shadeForWhite(c);
-        expect(contrast(shade, "#ffffff")).toBeGreaterThanOrEqual(4.5);
-        const diff = Math.abs(hue(shade) - hue(c));
-        expect(Math.min(diff, 360 - diff), `${c} -> ${shade}`).toBeLessThan(12);
-      }
+      for (const stop of [t.from, t.to]) expect(contrast(stop, token("accent")), `${t.name} ${stop}`).toBeGreaterThanOrEqual(3);
     }
   });
 
-  it("leaves a colour that is already dark enough alone", () => {
-    expect(shadeForWhite("#5a3bdb")).toBe("#5a3bdb");
+  it("keeps the small gold type and the topic readable on the card stock", () => {
+    expect(contrast(token("paper"), token("paper-gold"))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token("paper"), token("paper-ink"))).toBeGreaterThanOrEqual(7);
+  });
+
+  it("keeps text and hairlines readable on the table", () => {
+    for (const name of ["text", "text-dim", "accent"]) expect(contrast(token("ink"), token(name)), name).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token("ink"), token("line"))).toBeGreaterThanOrEqual(3);
+    expect(contrast(token("primary"), token("primary-ink"))).toBeGreaterThanOrEqual(7);
   });
 });

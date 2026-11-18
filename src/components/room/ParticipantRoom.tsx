@@ -145,7 +145,7 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
     }
     return (
       <div className="mx-auto w-full max-w-xl">
-        <h1 className="font-display text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ぜんぶオープン！</h1>
+        <h1 className="font-display font-semibold tracking-[0.04em] text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ぜんぶオープン！</h1>
         <p className="jp-wrap mt-2 text-text-dim">
           <Phrase text={`ルーム ${code} で集まった話題を、全部公開しています。`} />
         </p>
@@ -188,7 +188,7 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
           <CardBack theme="yoru" />
         </div>
       </div>
-      <h1 className="text-center font-display text-[1.7rem] leading-tight">めくトークに参加</h1>
+      <h1 className="text-center font-display font-semibold tracking-[0.04em] text-[1.7rem] leading-tight">ルームに参加</h1>
       <p className="mt-2 text-center text-text-dim">
         ルーム <span className="font-bold tracking-[0.15em] text-text">{code}</span>
         {data.status === "drawing" ? "（めくり中・投稿は締め切られています）" : null}
@@ -238,7 +238,7 @@ function JoinForm({ code, onJoined }: { code: string; onJoined: (s: { token: str
 function Collecting({ view, token, refresh }: { view: RoomView; token: string; refresh: () => Promise<void> }) {
   return (
     <>
-      <h1 className="font-display text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">話題を投稿しよう</h1>
+      <h1 className="font-display font-semibold tracking-[0.04em] text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">話題を投稿しよう</h1>
       <p className="jp-wrap mt-2 text-text-dim">
         <Phrase text="ほかの人の投稿は、終わるまで見えません。" />
         <br />
@@ -258,7 +258,7 @@ function Waiting({ view }: { view: RoomView }) {
   return (
     <div className="flex flex-col items-center pt-6 text-center">
       <WaitingCards />
-      <h1 className="font-display text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">ホストのスマホに注目！</h1>
+      <h1 className="font-display font-semibold tracking-[0.04em] text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">ホストのスマホに注目！</h1>
       <p className="jp-wrap mt-3 text-text-dim">
         {view.room.drawCount === 0 ? (
           "めくり始めました。もうすぐ1枚目が出ます。"
@@ -279,7 +279,7 @@ function HeldMessage({ code }: { code?: string }) {
   return (
     <div className="flex flex-col items-center pt-6 text-center">
       <WaitingCards />
-      <h1 className="font-display text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">ホストの合図で公開します</h1>
+      <h1 className="font-display font-semibold tracking-[0.04em] text-[clamp(1.6rem,7vw,2.1rem)] leading-tight">ホストの合図で公開します</h1>
       <p className="jp-wrap mt-3 text-text-dim">
         <Phrase
           text={`${code ? `ルーム ${code} は` : ""}全部めくり終わりました。合図があると、みんなのスマホで一覧が一斉に開きます。`}
@@ -320,7 +320,7 @@ function Reveal({ view }: { view: RoomView }) {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", stiffness: 220, damping: 18 }}
       >
-        <h1 className="font-display text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ぜんぶオープン！</h1>
+        <h1 className="font-display font-semibold tracking-[0.04em] text-[clamp(1.7rem,7.5vw,2.3rem)] leading-tight">ぜんぶオープン！</h1>
         <p className="mt-2 text-text-dim">
           みんなが出した<span className="mx-1 font-bold text-lamp tabular-nums">{items.length}件</span>の話題を、全部公開します。
         </p>

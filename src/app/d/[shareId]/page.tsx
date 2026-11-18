@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/Logo";
 import { PlaySkeleton } from "@/components/PlaySkeleton";
 import { ShareButton } from "@/components/ShareButton";
 import { getDb } from "@/lib/db";
+import { BRAND } from "@/lib/brand";
 import { getUserDeck } from "@/lib/decks/service";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -31,7 +32,7 @@ export default async function UserDeckPage({ params }: PageProps<"/d/[shareId]">
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center overflow-x-clip px-4 pt-2 pb-12 sm:px-6 short-landscape:py-4">
         <div className="mb-6 flex flex-col items-center gap-1 text-center short-landscape:sr-only">
           <h1 className="text-sm font-bold text-text-dim">{deck.title}</h1>
-          <ShareButton title={`${deck.title} | めくトーク`} />
+          <ShareButton title={`${deck.title} | ${BRAND.name}`} />
         </div>
         {/* The player shuffles on mount, so it is rendered per visit. */}
         <Suspense fallback={<PlaySkeleton />}>

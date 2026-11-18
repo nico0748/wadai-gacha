@@ -146,7 +146,7 @@ export function EditUserDeck({ shareId, editKey }: { shareId: string; editKey: s
       </section>
 
       <section aria-labelledby="edit-heading">
-        <h2 id="edit-heading" className="mb-6 text-xl font-black">
+        <h2 id="edit-heading" className="mb-6 text-xl font-display font-semibold tracking-[0.06em]">
           内容を編集
         </h2>
         {saved ? (

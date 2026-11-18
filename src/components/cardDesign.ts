@@ -248,7 +248,8 @@ export function longestPieceEms(text: string): number {
  */
 export function topicSize(text: string): string {
   const n = [...text].length;
-  const tier = n <= 10 ? 15 : n <= 22 ? 12 : n <= 40 ? 9.4 : n <= 60 ? 7.6 : 6.8;
+  // Set in mincho with room around it, so a short topic stays calm rather than shouting.
+  const tier = n <= 10 ? 13 : n <= 22 ? 10.5 : n <= 40 ? 9.4 : n <= 60 ? 7.6 : 6.8;
   const size = Math.min(tier, Math.max(TOPIC_MIN, TOPIC_LINE / longestPieceEms(text)));
   // Rounded down, so the longest piece never ends up a hair wider than the line.
   return `${Math.floor(size * 100 + 1e-6) / 100}cqi`;
@@ -266,15 +267,10 @@ function rgb(hex: string): Rgb {
   return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16)) as Rgb;
 }
 
-function toHex(c: Rgb): string {
-  return `#${c.map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0")).join("")}`;
-}
-
 const toLinear = (v: number) => {
   const s = v / 255;
   return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
 };
-const fromLinear = (v: number) => 255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055);
 
 /** WCAG relative luminance. */
 function luminance(hex: string): number {
@@ -286,67 +282,4 @@ function luminance(hex: string): number {
 export function contrast(a: string, b: string): number {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
-}
-
-/** sRGB hex to OKLCH [lightness 0..1, chroma, hue in radians]. */
-function toOklch(hex: string): [number, number, number] {
-  const [r, g, b] = rgb(hex).map(toLinear);
-  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-  const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
-  const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
-  const B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
-  return [L, Math.hypot(A, B), Math.atan2(B, A)];
-}
-
-/** OKLCH to sRGB (0..255 per channel), or null when it is outside sRGB. */
-function fromOklch(L: number, C: number, h: number): Rgb | null {
-  const A = C * Math.cos(h);
-  const B = C * Math.sin(h);
-  const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
-  const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
-  const s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
-  const lin = [
-    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
-  ];
-  if (lin.some((v) => v < -1e-4 || v > 1 + 1e-4)) return null;
-  return lin.map((v) => fromLinear(Math.min(1, Math.max(0, v)))) as Rgb;
-}
-
-/**
- * The colour, darkened until white text on it reads (4.5:1). It keeps its hue
- * and as much of its chroma as sRGB allows at that lightness, so a pink stays
- * pink instead of turning mauve or brown.
- */
-export function shadeForWhite(color: string, min = 4.5): string {
-  if (contrast(color, "#ffffff") >= min) return color;
-  const [L, C, h] = toOklch(color);
-  for (let l = L; l > 0; l -= 0.005) {
-    let c = C;
-    let out = fromOklch(l, c, h);
-    while (!out && c > 0) {
-      c = Math.max(0, c - 0.004);
-      out = fromOklch(l, c, h);
-    }
-    const hex = out ? toHex(out) : "#000000";
-    if (contrast(hex, "#ffffff") >= min) return hex;
-  }
-  return "#000000";
-}
-
-/**
- * The band across the top of a card front: the deck colours with text that
- * reads on them (4.5:1 for every stop). Light decks (lemon, rose) keep their
- * bright colours with ink text; the others carry white text, deepened where
- * they need it.
- */
-export function bandColors(theme: { from: string; to: string; ink: string }): { background: string; color: string } {
-  const reads = (text: string) => contrast(theme.from, text) >= 4.5 && contrast(theme.to, text) >= 4.5;
-  const gradient = (a: string, b: string) => `linear-gradient(110deg, ${a}, ${b})`;
-  if (reads("#ffffff")) return { background: gradient(theme.from, theme.to), color: "#ffffff" };
-  if (reads(theme.ink)) return { background: gradient(theme.from, theme.to), color: theme.ink };
-  return { background: gradient(shadeForWhite(theme.from), shadeForWhite(theme.to)), color: "#ffffff" };
 }

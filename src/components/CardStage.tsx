@@ -124,14 +124,14 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
   return (
     <div className="flex w-full flex-col items-center gap-x-10 short-landscape:flex-row short-landscape:justify-center">
       <div className="card-size relative isolate grid aspect-[5/7] place-items-center" style={{ perspective: "1400px" }}>
-        {/* The lamp over the table brightens while a card is in the air, and turns gold for a rare one. */}
+        {/* The lamp over the table brightens a little while a card is in the air, and warms to gold for a rare one. */}
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute -inset-[45%] -z-10 rounded-full"
           style={{
             background: golden
-              ? `radial-gradient(closest-side, color-mix(in srgb, ${LAMP} 60%, transparent), color-mix(in srgb, ${LAMP} 30%, transparent) 45%, transparent 75%)`
-              : `radial-gradient(closest-side, color-mix(in srgb, ${t.from} 33%, transparent), color-mix(in srgb, ${LAMP} 25%, transparent) 45%, transparent 75%)`,
+              ? `radial-gradient(closest-side, color-mix(in srgb, ${LAMP} 45%, transparent), color-mix(in srgb, ${LAMP} 20%, transparent) 45%, transparent 75%)`
+              : `radial-gradient(closest-side, color-mix(in srgb, ${PAPER} 16%, transparent), color-mix(in srgb, ${LAMP} 12%, transparent) 45%, transparent 75%)`,
           }}
           initial={false}
           animate={{
@@ -141,7 +141,9 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
           transition={{ duration: lifting ? 0.5 : 0.9 }}
         />
 
-        {celebrate ? <Rays key={`rays-${celebrate.key}`} color={celebrate.rare ? LAMP : t.from} /> : null}
+        {celebrate ? (
+          <Rays key={`rays-${celebrate.key}`} color={celebrate.rare ? LAMP : PAPER} strength={celebrate.rare ? 55 : 22} />
+        ) : null}
 
         {/* The pile underneath: one sliver per few cards, so a full deck looks thick. */}
         {Array.from({ length: pileCount }).map((_, i) => {
@@ -157,8 +159,8 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
                 filter: `brightness(${1 - depth * 0.07})`,
                 boxShadow:
                   depth === pileCount
-                    ? "0 18px 34px -14px rgb(0 0 0 / 0.75), inset 0 -1.5px 0 color-mix(in srgb, var(--color-paper) 45%, transparent)"
-                    : "inset 0 -1.5px 0 color-mix(in srgb, var(--color-paper) 45%, transparent)",
+                    ? "0 18px 34px -14px rgb(0 0 0 / 0.75), inset 0 -1px 0 color-mix(in srgb, var(--color-accent) 40%, transparent)"
+                    : "inset 0 -1px 0 color-mix(in srgb, var(--color-accent) 40%, transparent)",
               }}
               aria-hidden="true"
             />
@@ -190,8 +192,8 @@ export function CardStage({ theme, deckTitle, remaining, onDraw, canDraw, blocke
           <Confetti
             key={`confetti-${celebrate.key}`}
             rare={celebrate.rare}
-            // Colours that read on the dark table and against any deck's frame (not the deck's darker `to`).
-            colors={celebrate.rare ? GOLD : [t.from, LAMP, PAPER, ACCENT]}
+            // A few flecks of brass and card stock: they read on the dark table and on any deck.
+            colors={celebrate.rare ? GOLD : CALM}
           />
         ) : null}
 
@@ -307,7 +309,7 @@ function ActiveCardView({
                   scale: lift.chargedScale,
                   rotateX: 8,
                   x: [0, -1.5, 1.5, -1.5, 1.5, 0],
-                  rotate: [0, -1.6, 1.6, -1.6, 1.6, -1, 1, 0],
+                  rotate: [0, -1.2, 1.2, -1.2, 1.2, -0.8, 0.8, 0],
                   transition: {
                     y: { duration: 0.25, ease: "easeOut" },
                     scale: { duration: 0.25 },
@@ -319,7 +321,7 @@ function ActiveCardView({
                   y: [0, 4, lift.y],
                   scale: [1, 0.98, lift.scale],
                   rotateX: [0, 0, 8],
-                  rotate: [0, -0.8, 0.8, -0.8, 0.8, -0.5, 0.5, 0],
+                  rotate: [0, -0.5, 0.5, -0.5, 0.5, -0.3, 0.3, 0],
                   transition: {
                     y: { duration: 0.42, times: [0, 0.3, 1], ease: "easeOut" },
                     scale: { duration: 0.42, times: [0, 0.3, 1] },
@@ -362,7 +364,7 @@ function ActiveCardView({
           >
             {card.topic ? (
               <>
-                <CardFront theme={theme} text={card.topic.text} deckTitle={deckTitle} order={card.topic.order} rare={rare} />
+                <CardFront text={card.topic.text} deckTitle={deckTitle} order={card.topic.order} rare={rare} />
                 {rare && !reduce && card.fresh ? <Sheen /> : null}
               </>
             ) : null}
@@ -400,7 +402,7 @@ function Sheen() {
 }
 
 /** Light bursting from behind a card as it turns over. Unmounts when done. */
-function Rays({ color }: { color: string }) {
+function Rays({ color, strength }: { color: string; strength: number }) {
   const [done, setDone] = useState(false);
   useEffect(() => {
     const id = setTimeout(() => setDone(true), 700);
@@ -412,7 +414,7 @@ function Rays({ color }: { color: string }) {
       aria-hidden="true"
       className="pointer-events-none absolute -inset-[60%] -z-[5] rounded-full"
       style={{
-        background: `repeating-conic-gradient(from 0deg, color-mix(in srgb, ${color} 60%, transparent) 0deg 3.5deg, transparent 6deg 15deg)`,
+        background: `repeating-conic-gradient(from 0deg, color-mix(in srgb, ${color} ${strength}%, transparent) 0deg 2deg, transparent 4deg 15deg)`,
         maskImage: "radial-gradient(closest-side, black 35%, transparent 100%)",
         WebkitMaskImage: "radial-gradient(closest-side, black 35%, transparent 100%)",
       }}
@@ -424,7 +426,7 @@ function Rays({ color }: { color: string }) {
 }
 
 const PAPER = "var(--color-paper)";
-const ACCENT = "var(--color-accent)";
+const CALM = [LAMP, PAPER, "var(--color-foil-light)"];
 const GOLD = [LAMP, "var(--color-foil-light)", PAPER, LAMP, "var(--color-foil-deep)"];
 
 /** Seconds each piece is in the air. */
@@ -470,8 +472,8 @@ function makePieces(count: number, salt: number) {
   });
 }
 type PieceSpec = ReturnType<typeof makePieces>[number];
-const PIECES = makePieces(48, 0);
-const RARE_PIECES = makePieces(72, 31);
+const PIECES = makePieces(24, 0);
+const RARE_PIECES = makePieces(60, 31);
 
 /** How far the pieces may fly sideways: the table beside the card, 36px of it per step. */
 function sideReach() {

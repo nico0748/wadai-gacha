@@ -6,7 +6,7 @@ test("draws from a built-in deck until it runs out, then reshuffles", async ({ p
   await expect(page.getByRole("heading", { name: "エンジニア" })).toBeVisible();
   await expect(page.getByText("残り30枚", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "カードをめくる", exact: true }).click();
-  await expect(page.getByText("No.1").first()).toBeVisible();
+  await expect(page.getByText("No. 1").first()).toBeVisible();
   await expect(page.getByText("残り29枚", { exact: true })).toBeVisible();
 });
 

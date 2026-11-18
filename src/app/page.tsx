@@ -6,7 +6,7 @@ import { Phrase } from "@/components/Phrase";
 import { findBuiltinDeck } from "@/lib/decks/builtin";
 import type { Deck } from "@/lib/decks/types";
 
-/** The decks on the home table: よる, the logo's colours, in the middle. */
+/** The decks on the home table, 初対面 (夜) in the middle. */
 const FAN_DECKS = ["zatsudan", "shotaimen", "game"];
 const FAN = [
   { rotate: -11, x: "-58%", y: "10%" },
@@ -21,13 +21,14 @@ export default function Home() {
       <SiteHeader />
       <main className="mx-auto grid w-full max-w-5xl flex-1 gap-14 px-4 pt-6 pb-16 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-10 lg:pt-14">
         <section>
-          <h1 className="jp-wrap font-display text-[clamp(2.9rem,15vw,4.75rem)] leading-[1.14] tracking-[0.02em]">
+          <p className="text-[0.8rem] tracking-[0.22em] text-text-dim">テーブルのための、会話のカード</p>
+          <h1 className="jp-wrap mt-4 font-display text-[clamp(2.5rem,11vw,4rem)] leading-[1.42] font-semibold tracking-[0.06em]">
             めくって、
             <br />
             話そう。
           </h1>
-          <p className="jp-wrap mt-6 max-w-[30em] text-[1.02rem] text-text-dim">
-            <Phrase text="みんなで話題を出し合って、テーブルに置いたスマホでカードを1枚ずつめくります。何が出るかは、お楽しみです。" />
+          <p className="jp-wrap mt-5 max-w-[30em] text-[0.95rem] leading-[1.95] tracking-[0.04em] text-text-dim">
+            <Phrase text="みんなで話題を出し合って、テーブルに置いたスマホでカードを一枚ずつめくります。何が出るかは、めくってのお楽しみ。" />
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:max-w-sm">
@@ -65,7 +66,7 @@ export default function Home() {
               </Link>
             ))}
           </div>
-          <ul className="mt-3 flex justify-center gap-3 text-sm font-bold text-text-dim">
+          <ul className="mt-3 flex justify-center gap-3 font-display text-sm font-medium tracking-[0.2em] text-text-dim">
             {fanDecks.map((deck) => (
               <li key={deck.id}>
                 <Link href={`/decks/${deck.id}`} className="inline-flex min-h-11 items-center rounded-full px-3 hover:text-text">
@@ -77,7 +78,7 @@ export default function Home() {
         </section>
 
         <section className="lg:col-span-2" aria-labelledby="how">
-          <h2 id="how" className="text-lg font-black">
+          <h2 id="how" className="font-display text-lg font-semibold tracking-[0.08em]">
             ルームの遊び方
           </h2>
           <ol className="mt-4 grid border-t border-line/70 sm:grid-cols-3 sm:gap-8 sm:border-t-0">
@@ -87,11 +88,11 @@ export default function Home() {
               ["カードをめくって話す", "ホストのスマホで1枚ずつめくって、出た話題でトーク。終わったら全員のスマホに一覧が届きます。"],
             ].map(([title, body], i) => (
               <li key={title} className="flex gap-5 border-b border-line/70 py-5 sm:border-t sm:border-b-0">
-                <span className="w-8 shrink-0 font-display text-[2.5rem] leading-none text-lamp tabular-nums" aria-hidden="true">
+                <span className="w-8 shrink-0 font-latin text-[2.4rem] leading-none font-medium text-lamp italic" aria-hidden="true">
                   {i + 1}
                 </span>
                 <div>
-                  <h3 className="font-black">{title}</h3>
+                  <h3 className="font-display font-semibold tracking-[0.04em]">{title}</h3>
                   <p className="jp-wrap mt-1 text-sm text-text-dim">
                     <Phrase text={body} />
                   </p>

@@ -1,20 +1,19 @@
 /**
- * Card-back colourways. Each deck picks one; the key is stored in the DB.
+ * Card-back colourways. Each deck picks one; the key is stored in the DB, so
+ * the keys stay as they were when the colours changed.
  *
- * よる is the logo's lavender and navy. The others are dusty, each mixed
- * about 30% toward the logo navy (#495a79), so they sit with the logo on the
- * night table instead of reading as candy. `ink` is the deep tone for text on
- * paper and for the card front's band, which is darkened toward it until
- * white text reads.
+ * Deep, quiet jewel tones that sit on the ink table: the brass frame and
+ * monogram read on every one of them, and so does the ivory deck name.
+ * `from` is the lighter corner of the card back, `to` the deeper one.
  */
 export const DECK_THEMES = {
-  yoru: { name: "よる", from: "#8388af", to: "#495a79", ink: "#232c44" },
-  candy: { name: "キャンディ", from: "#c85b85", to: "#8a50d7", ink: "#3a0c2a" },
-  mint: { name: "ミント", from: "#42b8a1", to: "#337ecf", ink: "#062a2a" },
-  lemon: { name: "レモン", from: "#c8af56", to: "#c8704f", ink: "#3a2306" },
-  sky: { name: "スカイ", from: "#6da4d7", to: "#565bd7", ink: "#0b1640" },
-  rose: { name: "ローズ", from: "#c888a5", to: "#c8525c", ink: "#3d0a12" },
-  grape: { name: "グレープ", from: "#9f88d7", to: "#5544be", ink: "#1d0d45" },
+  yoru: { name: "夜", from: "#343c5e", to: "#222944" },
+  candy: { name: "紅", from: "#6a2f3e", to: "#45202c" },
+  mint: { name: "深緑", from: "#2f4d44", to: "#1f342d" },
+  lemon: { name: "山吹", from: "#665023", to: "#463619" },
+  sky: { name: "灰青", from: "#3e5066", to: "#2a3647" },
+  rose: { name: "煉瓦", from: "#653c33", to: "#472a24" },
+  grape: { name: "葡萄", from: "#4e3a5c", to: "#332640" },
 } as const;
 
 export type DeckTheme = keyof typeof DECK_THEMES;
