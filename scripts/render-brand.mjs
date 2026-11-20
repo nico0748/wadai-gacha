@@ -1,6 +1,7 @@
 /**
- * Draws the MEKURI icons, favicon and share image from the same type and
- * colours as the app, in the Playwright Chromium, and writes them into place.
+ * Draws the MEKURI share image (src/app/opengraph-image.png) from the same
+ * type and colours as the app, in the Playwright Chromium. The icons and
+ * favicon come from Nico's icon instead: scripts/export-icons.py.
  *
  *   node scripts/render-brand.mjs
  *
@@ -11,25 +12,6 @@ import { chromium } from "@playwright/test";
 
 const FONTS = `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Shippori+Mincho+B1:wght@500;600&display=block">`;
 const INK = "#0f1218", BRASS = "#c2a46e", IVORY = "#ede6da", DIM = "#a39c90";
-
-// The mark: two cards, the back one a faint outline, the front one with an M.
-function mark(size, { stroke = 1.25, faint = 0.4 } = {}) {
-  return `<svg width="${size}" height="${size}" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="24" y="16" width="42" height="60" rx="5" stroke="${BRASS}" stroke-opacity="${faint}" stroke-width="${stroke}" transform="rotate(-9 45 46)"/>
-  <rect x="30" y="20" width="42" height="60" rx="5" fill="${INK}" stroke="${BRASS}" stroke-width="${stroke}" transform="rotate(5 51 50)"/>
-  <text x="51" y="59" text-anchor="middle" transform="rotate(5 51 50)" font-family="Cormorant Garamond" font-size="27" font-weight="500" fill="${BRASS}">M</text>
-</svg>`;
-}
-
-function iconPage(px, { radius = 0, scale = 0.86, stroke, faint, letterOnly = false, bg = INK } = {}) {
-  const inner = letterOnly
-    ? `<span style="font-family:'Cormorant Garamond';font-weight:600;font-size:${px * 0.86}px;line-height:1;color:${BRASS};transform:translateY(-4%)">M</span>`
-    : mark(Math.round(px * scale), { stroke, faint });
-  return `<!doctype html><html><head>${FONTS}<style>html,body{margin:0;background:transparent}
-  .i{width:${px}px;height:${px}px;display:grid;place-items:center;background:${bg};border-radius:${radius}px;overflow:hidden;
-  background-image:radial-gradient(70% 60% at 50% 30%, rgba(237,230,218,.07), transparent 70%)}</style></head>
-  <body><div class="i">${inner}</div></body></html>`;
-}
 
 function ogPage() {
   const back = (from, to, rot, x, y, z, label = "") => `<div style="position:absolute;left:${x}px;top:${y}px;width:176px;height:246px;border-radius:14px;transform:rotate(${rot}deg);z-index:${z};
@@ -64,25 +46,6 @@ function ogPage() {
   </div></body></html>`;
 }
 
-/** An .ico holding PNG images (every browser since IE Vista reads them). */
-function ico(images) {
-  const header = Buffer.alloc(6 + 16 * images.length);
-  header.writeUInt16LE(1, 2);
-  header.writeUInt16LE(images.length, 4);
-  let offset = header.length;
-  images.forEach(({ size, data }, i) => {
-    const o = 6 + i * 16;
-    header.writeUInt8(size % 256, o);
-    header.writeUInt8(size % 256, o + 1);
-    header.writeUInt16LE(1, o + 4);
-    header.writeUInt16LE(32, o + 6);
-    header.writeUInt32LE(data.length, o + 8);
-    header.writeUInt32LE(offset, o + 12);
-    offset += data.length;
-  });
-  return Buffer.concat([header, ...images.map((im) => im.data)]);
-}
-
 const browser = await chromium.launch();
 async function shot(html, w, h, transparent = true) {
   const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
@@ -93,22 +56,5 @@ async function shot(html, w, h, transparent = true) {
   return png;
 }
 
-// Home-screen icons: opaque and square (the phone rounds them).
-writeFileSync("public/icons/icon-512.png", await shot(iconPage(512), 512, 512, false));
-writeFileSync("public/icons/icon-192.png", await shot(iconPage(192), 192, 192, false));
-writeFileSync("src/app/apple-icon.png", await shot(iconPage(180), 180, 180, false));
-// Maskable: the mark well inside the 80% safe circle.
-writeFileSync("public/icons/icon-maskable-512.png", await shot(iconPage(512, { scale: 0.62 }), 512, 512, false));
-// Browser tabs: a rounded tile, so it reads on light and dark tab bars. At 16
-// and 32px the two cards blur together, so those carry the M alone.
-writeFileSync("src/app/icon.png", await shot(iconPage(256, { radius: 56, scale: 0.9 }), 256, 256));
-writeFileSync(
-  "src/app/favicon.ico",
-  ico([
-    { size: 16, data: await shot(iconPage(16, { radius: 3, letterOnly: true }), 16, 16) },
-    { size: 32, data: await shot(iconPage(32, { radius: 7, letterOnly: true }), 32, 32) },
-    { size: 48, data: await shot(iconPage(48, { radius: 10, scale: 0.98, stroke: 3, faint: 0.5 }), 48, 48) },
-  ]),
-);
 writeFileSync("src/app/opengraph-image.png", await shot(ogPage(), 1200, 630, false));
 await browser.close();
