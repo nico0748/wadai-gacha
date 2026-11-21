@@ -43,8 +43,8 @@ http://localhost:3000 を開きます。データベースの準備は不要で�
 
 - ヘッダーのロゴは画像ではなく、Cormorant Garamond で組んだ文字です（`src/components/Logo.tsx`）
 - 色と書体はアプリと同じです。墨 `#0f1218` の地、生成り `#ede6da` の文字、真鍮 `#c2a46e` の差し色、紙 `#f2ece2` のカード。見出しとカードの話題はしっぽり明朝 B1、本文は Zen角ゴシック New
-- アイコンとファビコンは Nico が作った「重なり合う3枚のカード」です。元画像は [docs/brand](docs/brand) の `mekuri_app_icon_opaque.png`（タイル付き）と `mekuri_mark_transparent.png`（透過）で、`python3 scripts/export-icons.py`（要 Pillow）で各サイズに書き出します。AI生成の画像で背景にかすかなノイズがあるため、背景色を均してからマークを切り出しています
-- 共有画像は `node scripts/render-brand.mjs` で描き直せます（PlaywrightのChromiumで描画。初回はGoogle Fontsの読み込みにネットワークが要ります）
+- アイコンとファビコンは Nico が作った「重なり合う3枚のカード」です。元画像は [docs/brand](docs/brand) の `mekuri_app_icon_opaque.png`（タイル付き）と `mekuri_mark_transparent.png`（透過）で、`python3 scripts/export-icons.py`（要 Pillow）で各サイズに書き出します。AI生成の画像で背景にかすかなノイズがあるため、背景色を均してからマークを切り出しています。同じスクリプトが、カードだけを透過で切り抜いた `docs/brand/mekuri_mark.png` も書き出します
+- 共有画像は、ロゴの文字組みとこの3枚のカードを並べたものです。`node scripts/render-brand.mjs` で描き直せます（PlaywrightのChromiumで描画。初回はGoogle Fontsの読み込みにネットワークが要ります。アイコンを差し替えたときは先に `export-icons.py` を）
 
 | ファイル | 用途 |
 | --- | --- |
