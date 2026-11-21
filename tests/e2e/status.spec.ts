@@ -20,7 +20,7 @@ test("missing decks answer 404 when rendered dynamically", async ({ request }) =
   for (const path of MISSING) {
     const res = await request.get(path, { headers: { "user-agent": "Twitterbot/1.0" } });
     expect(res.status(), path).toBe(404);
-    expect(await res.text(), path).toContain("<title>見つかりません | めくトーク</title>");
+    expect(await res.text(), path).toContain("<title>見つかりません | MEKURI</title>");
   }
   const found = await request.get("/decks/game", { headers: { "user-agent": "Twitterbot/1.0" } });
   expect(found.status()).toBe(200);

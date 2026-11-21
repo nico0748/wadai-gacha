@@ -1,15 +1,16 @@
+import { BRAND } from "@/lib/brand";
 import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "めくトーク",
-    short_name: "めくトーク",
-    description: "みんなで話題を出し合って、1枚ずつめくって話す。飲み会や雑談のお供に。",
+    name: BRAND.name,
+    short_name: BRAND.name,
+    description: BRAND.description,
     lang: "ja",
     start_url: "/",
     display: "standalone",
-    background_color: "#121726",
-    theme_color: "#121726",
+    background_color: BRAND.themeColor,
+    theme_color: BRAND.themeColor,
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },

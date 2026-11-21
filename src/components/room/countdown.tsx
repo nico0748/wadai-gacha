@@ -48,7 +48,7 @@ export function RevealCountdown({ revealAt, offsetMs }: { revealAt: string | nul
       className="fixed inset-0 z-50 grid place-items-center bg-ink/95 px-6 text-center backdrop-blur-md"
     >
       <div className="grid justify-items-center gap-4">
-        <p className="text-lg font-black text-text-dim">みんなで一緒に公開します</p>
+        <p className="text-lg font-display font-semibold tracking-[0.06em] text-text-dim">みんなで一緒に公開します</p>
         <div className="relative grid h-[clamp(8rem,42vw,13rem)] place-items-center">
           {/* A ring of lamp light goes out with each number, like a beat. */}
           {digit && !reduce ? (
@@ -68,8 +68,10 @@ export function RevealCountdown({ revealAt, offsetMs }: { revealAt: string | nul
               animate={{ scale: 1, opacity: 1 }}
               exit={reduce ? { opacity: 0 } : { scale: 0.7, opacity: 0 }}
               transition={{ type: "spring", stiffness: 320, damping: 20 }}
-              className={`relative font-display leading-none text-lamp ${
-                digit ? "text-[clamp(7rem,40vw,12rem)]" : "text-[clamp(2.6rem,13vw,4.5rem)]"
+              className={`relative leading-none text-lamp ${
+                digit
+                  ? "font-latin text-[clamp(7rem,40vw,12rem)] font-medium"
+                  : "font-display text-[clamp(2.6rem,13vw,4.5rem)] font-semibold tracking-[0.06em]"
               }`}
             >
               {step === "ready" ? "せーの" : step === "open" ? "オープン！" : step}

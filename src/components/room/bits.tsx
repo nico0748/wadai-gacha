@@ -38,7 +38,7 @@ export function Notice({
 }) {
   return (
     <div className="mx-auto max-w-md py-16 text-center">
-      <h1 className="font-display text-2xl">{title}</h1>
+      <h1 className="font-display font-semibold tracking-[0.04em] text-2xl">{title}</h1>
       <p className="mt-3 text-text-dim">{body}</p>
       {children ? <div className="mt-8 flex justify-center gap-3">{children}</div> : null}
       {footer ? <div className="mt-12 border-t border-line/70 pt-8 text-left">{footer}</div> : null}
@@ -62,7 +62,7 @@ export function BottomBar({ children, className = "" }: { children: React.ReactN
 
 export function DrawnBadge() {
   return (
-    <span className="shrink-0 rounded-full bg-lamp/20 px-2.5 py-0.5 text-xs font-black text-lamp">めくられた！</span>
+    <span className="shrink-0 rounded-full bg-lamp/20 px-2.5 py-0.5 text-xs font-bold tracking-[0.08em] text-lamp">めくられた！</span>
   );
 }
 

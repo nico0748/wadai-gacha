@@ -608,7 +608,7 @@ describe("results to keep", () => {
   it("writes the list to share: numbered drawn topics, then the rest, then the site", () => {
     const text = revealShareText([item("A", 1, "ケン"), item("B", 2), item("C", null, "ニコ")], "https://example.com/");
     expect(text.split("\n")).toEqual([
-      "めくトークで集まった話題",
+      "MEKURIで集まった話題",
       "",
       "めくった話題",
       "1. A",

@@ -25,7 +25,7 @@ export function JoinByCode() {
           <span className="inline-block">ルームコードで参加</span>
         </span>
         <input
-          className="field font-bold tracking-[0.25em] uppercase placeholder:tracking-normal"
+          className="field font-latin text-[1.25rem] leading-snug font-medium tracking-[0.3em] uppercase placeholder:font-sans placeholder:text-base placeholder:tracking-[0.04em]"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder="6文字のコード"

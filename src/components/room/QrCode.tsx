@@ -12,7 +12,7 @@ export function QrCode({ value, label }: { value: string; label: string }) {
       type: "svg",
       margin: 0,
       errorCorrectionLevel: "M",
-      color: { dark: "#121726", light: "#00000000" },
+      color: { dark: "#0f1218", light: "#00000000" },
     })
       .then((s) => alive && setSvg(s))
       .catch(() => alive && setSvg(null));

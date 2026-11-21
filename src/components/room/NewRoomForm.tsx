@@ -97,7 +97,7 @@ export function NewRoomForm() {
   return (
     <form onSubmit={submit} className="grid gap-9">
       <fieldset className="grid gap-3">
-        <legend className="mb-3 text-lg font-black">いつ終わる？</legend>
+        <legend className="mb-3 text-lg font-display font-semibold tracking-[0.06em]">いつ終わる？</legend>
         <Choice
           name="endMode"
           value="all"
@@ -131,7 +131,7 @@ export function NewRoomForm() {
       </fieldset>
 
       <fieldset className="grid gap-3">
-        <legend className="mb-3 text-lg font-black">誰が書いたか、見せる？</legend>
+        <legend className="mb-3 text-lg font-display font-semibold tracking-[0.06em]">誰が書いたか、見せる？</legend>
         <Choice
           name="nameMode"
           value="anonymous"

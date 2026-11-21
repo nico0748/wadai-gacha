@@ -33,7 +33,7 @@ export default async function EditDeckPage({ params }: PageProps<"/d/[shareId]/e
         </Link>
       </SiteHeader>
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 pt-6 pb-16 sm:px-6">
-        <h1 className="mb-8 font-display text-[clamp(1.8rem,7vw,2.4rem)] leading-tight">デッキを編集</h1>
+        <h1 className="mb-8 font-display font-semibold tracking-[0.04em] text-[clamp(1.8rem,7vw,2.4rem)] leading-tight">デッキを編集</h1>
         {/* The editor reads ?created=1 from the URL. */}
         <Suspense fallback={<p className="text-text-dim">読み込んでいます…</p>}>
           <EditUserDeck shareId={id} editKey={decodeURIComponent(key)} />

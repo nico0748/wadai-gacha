@@ -65,7 +65,7 @@ test("host collects topics by QR, draws them, and everyone opens the list togeth
 
   for (let i = 0; i < 3; i++) {
     await page.getByRole("button", { name: DRAW_BUTTON }).click();
-    await expect(page.getByText(`No.${i + 1}`).first()).toBeVisible();
+    await expect(page.getByText(`No. ${i + 1}`).first()).toBeVisible();
   }
   await expect(page.getByText("これが最後の1枚です")).toBeVisible();
 
@@ -115,7 +115,7 @@ test("named room: the host ends early with せーの, then runs 答え合わせ"
   await page.getByRole("button", { name: "締め切ってめくり始める" }).click();
   await page.getByRole("button", { name: "始める", exact: true }).click();
   await page.getByRole("button", { name: DRAW_BUTTON }).click();
-  await expect(page.getByText("No.1").first()).toBeVisible();
+  await expect(page.getByText("No. 1").first()).toBeVisible();
 
   // Ending is one tap from the bottom bar, and starts the countdown right away.
   await page.getByRole("button", { name: "ここで終わりにする" }).click();

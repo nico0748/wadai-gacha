@@ -14,7 +14,7 @@ export function MyDecks() {
   return (
     <section className="mt-16 border-t border-line/70 pt-10" aria-labelledby="my-decks">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 id="my-decks" className="text-lg font-black">
+        <h2 id="my-decks" className="text-lg font-display font-semibold tracking-[0.06em]">
           自分のデッキ
         </h2>
         <Link href="/decks/new" className="btn-quiet min-h-11 px-4 text-sm">

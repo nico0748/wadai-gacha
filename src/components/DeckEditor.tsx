@@ -178,7 +178,7 @@ function Preview({ theme, title, sample, stacked = false }: { theme: DeckTheme; 
           <CardBack theme={theme} label={title.trim() || "デッキ名"} />
         </div>
         <div className={`relative aspect-[5/7] ${stacked ? "w-full" : "w-[min(40vw,9.5rem)] rotate-3"} ${shadow}`}>
-          <CardFront theme={theme} text={sample ?? "1枚目のカードがここに表示されます"} deckTitle={title.trim() || "デッキ名"} order={1} />
+          <CardFront text={sample ?? "1枚目のカードがここに表示されます"} deckTitle={title.trim() || "デッキ名"} order={1} />
         </div>
       </div>
     </div>

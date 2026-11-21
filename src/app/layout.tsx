@@ -1,25 +1,37 @@
 import type { Metadata, Viewport } from "next";
-import { Dela_Gothic_One, Zen_Maru_Gothic } from "next/font/google";
+import { Cormorant_Garamond, Shippori_Mincho_B1, Zen_Kaku_Gothic_New } from "next/font/google";
+import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
-const dela = Dela_Gothic_One({
-  variable: "--font-dela",
-  weight: "400",
+// Headings and card topics: a mincho with a calligraphic hand.
+const mincho = Shippori_Mincho_B1({
+  variable: "--font-mincho",
+  weight: ["500", "600", "700"],
   subsets: ["latin"],
   preload: false,
   display: "swap",
 });
 
-const zen = Zen_Maru_Gothic({
-  variable: "--font-zen",
-  weight: ["500", "700", "900"],
+// Body text, buttons and fields: a plain, quiet gothic.
+const gothic = Zen_Kaku_Gothic_New({
+  variable: "--font-gothic",
+  weight: ["400", "500", "700"],
   subsets: ["latin"],
   preload: false,
   display: "swap",
 });
 
-const NAME = "めくトーク";
-const DESCRIPTION = "みんなで話題を出し合って、1枚ずつめくって話す。飲み会や雑談のお供に。";
+// The Latin wordmark and card numbers.
+const serif = Cormorant_Garamond({
+  variable: "--font-serif",
+  weight: ["500", "600"],
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const NAME = BRAND.name;
+const DESCRIPTION = BRAND.description;
 
 export const metadata: Metadata = {
   // Share images need an absolute URL. On Vercel, Next fills this in by itself.
@@ -33,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#121726",
+  themeColor: BRAND.themeColor,
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -41,7 +53,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ja" className={`${dela.variable} ${zen.variable} h-full antialiased`}>
+    <html lang="ja" className={`${mincho.variable} ${gothic.variable} ${serif.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

@@ -21,7 +21,7 @@ export function LostCard({ title, body }: { title: string; body: string }) {
         </div>
       </div>
 
-      <h1 className="jp-wrap mt-10 font-display text-[clamp(1.45rem,6.4vw,1.9rem)] leading-snug">
+      <h1 className="jp-wrap mt-10 font-display font-semibold tracking-[0.04em] text-[clamp(1.45rem,6.4vw,1.9rem)] leading-snug">
         <Phrase text={title} />
       </h1>
       <p className="jp-wrap mt-3 text-text-dim">

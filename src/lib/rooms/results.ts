@@ -1,3 +1,4 @@
+import { BRAND } from "../brand";
 import { LIMITS } from "../limits";
 import type { RevealItem } from "./types";
 
@@ -5,6 +6,7 @@ import type { RevealItem } from "./types";
  * A room's topics handed to /decks/new through sessionStorage. Nothing is
  * saved until the person taps 作る there. Never carries nicknames.
  */
+// The key keeps the old name, so a draft made just before the rename still opens.
 export const DECK_DRAFT_KEY = "mekutalk:deck-draft";
 
 export interface DeckDraft {
@@ -45,7 +47,7 @@ export function parseDeckDraft(raw: string | null): DeckDraft | null {
 export function revealShareText(items: RevealItem[], siteUrl: string): string {
   const drawn = items.filter((i) => i.order !== null).sort((a, b) => a.order! - b.order!);
   const undrawn = items.filter((i) => i.order === null);
-  const lines = ["めくトークで集まった話題"];
+  const lines = [`${BRAND.name}で集まった話題`];
   if (drawn.length > 0) {
     lines.push("", "めくった話題");
     drawn.forEach((i, n) => lines.push(`${n + 1}. ${i.text}`));

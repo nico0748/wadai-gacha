@@ -269,7 +269,7 @@ function Collecting({
           className="mx-auto w-full max-w-[22rem] text-center lg:col-start-1 lg:row-span-2 lg:row-start-1"
           aria-labelledby="qr-heading"
         >
-          <h1 id="qr-heading" className="font-display text-[1.6rem] leading-tight">
+          <h1 id="qr-heading" className="font-display font-semibold tracking-[0.04em] text-[1.6rem] leading-tight">
             QRを読み込んで、
             <br />
             話題を投稿してね
@@ -282,7 +282,7 @@ function Collecting({
             ルームコード
             <span className="sr-only">{view.room.code.split("").join(" ")}</span>
           </p>
-          <p className="font-display text-[2.1rem] leading-none tracking-[0.18em] tabular-nums" aria-hidden="true">
+          <p className="mt-1 pl-[0.3em] font-latin text-[2.3rem] leading-none font-medium tracking-[0.3em]" aria-hidden="true">
             {view.room.code}
           </p>
           {origin ? (
@@ -318,14 +318,14 @@ function Collecting({
           <p className="flex items-baseline gap-1.5">
             <motion.span
               key={topics}
-              initial={reduce ? false : { scale: 1.35, color: "#f2c46d" }}
-              animate={{ scale: 1, color: "#eef0f7" }}
+              initial={reduce ? false : { scale: 1.2, color: "#c2a46e" }}
+              animate={{ scale: 1, color: "#ede6da" }}
               transition={{ type: "spring", stiffness: 300, damping: 16 }}
-              className="inline-block font-display text-[2rem] leading-none"
+              className="inline-block font-latin text-[2.3rem] leading-none font-medium"
             >
               {topics}
             </motion.span>
-            <span className="font-black">件の話題</span>
+            <span className="font-bold">件の話題</span>
           </p>
           <p className="text-sm text-text-dim">
             参加 <span className="font-bold text-text tabular-nums">{guests}</span> 人
@@ -579,14 +579,14 @@ function Results({
 
   return (
     <div className="mx-auto w-full max-w-xl">
-      <h1 className="font-display text-[clamp(1.7rem,7vw,2.3rem)] leading-tight">ぜんぶオープン！</h1>
+      <h1 className="font-display font-semibold tracking-[0.04em] text-[clamp(1.7rem,7vw,2.3rem)] leading-tight">ぜんぶオープン！</h1>
       <p className="jp-wrap mt-2 text-text-dim">
         <Phrase text="集まった話題を全部公開しました。参加者のスマホにも同じ一覧が表示されています。" />
       </p>
 
       {mode === "choose" ? (
         <section className="mt-8 grid gap-3 rounded-card border border-lamp/40 bg-lamp/5 p-5" aria-labelledby="answers-heading">
-          <h2 id="answers-heading" className="font-black">
+          <h2 id="answers-heading" className="font-display font-semibold tracking-[0.06em]">
             誰が書いたかは、まだ秘密です
           </h2>
           <p className="text-sm text-text-dim">みんなで当ててから名前を出すか、すぐに全部見せるかを選べます。</p>
@@ -689,7 +689,7 @@ function Guess({
         animate={{ opacity: 1, y: 0, rotate: 0 }}
         className="relative aspect-[5/7] w-[min(62vw,15rem)] rounded-card shadow-[0_24px_48px_-20px_rgb(0_0_0/0.85)] [@media(max-height:719.98px)]:w-[min(50vw,12rem)]"
       >
-        <CardFront theme={ROOM_THEME} text={item.text} deckTitle="みんなの話題" order={item.order} rare={item.rare} />
+        <CardFront text={item.text} deckTitle="みんなの話題" order={item.order} rare={item.rare} />
       </motion.div>
       <div aria-live="polite">
         <p className="text-sm text-text-dim">書いたのは</p>
@@ -698,7 +698,7 @@ function Guess({
           initial={reduce || !revealed ? false : { scale: 1.4, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 300, damping: 16 }}
-          className={`font-display text-[clamp(1.8rem,9vw,2.6rem)] leading-tight ${revealed ? "text-lamp" : ""}`}
+          className={`font-display font-semibold tracking-[0.04em] text-[clamp(1.8rem,9vw,2.6rem)] leading-tight ${revealed ? "text-lamp" : ""}`}
         >
           {revealed ? item.author : "？"}
         </motion.p>

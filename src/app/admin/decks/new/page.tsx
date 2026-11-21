@@ -18,7 +18,7 @@ export default function NewOfficialDeckPage() {
         </Link>
       </SiteHeader>
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 pt-6 pb-16 sm:px-6">
-        <h1 className="mb-8 font-display text-[clamp(1.7rem,6vw,2.2rem)]">デッキを追加</h1>
+        <h1 className="mb-8 font-display font-semibold tracking-[0.04em] text-[clamp(1.7rem,6vw,2.2rem)]">デッキを追加</h1>
         <Suspense fallback={<p className="text-text-dim">読み込んでいます…</p>}>
           <Guarded />
         </Suspense>

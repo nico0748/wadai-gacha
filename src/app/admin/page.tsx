@@ -51,7 +51,7 @@ async function AdminHome() {
   if (!(await isAdmin())) {
     return (
       <>
-        <h1 className="mb-8 text-center font-display text-2xl">管理画面</h1>
+        <h1 className="mb-8 text-center font-display font-semibold tracking-[0.04em] text-2xl">管理画面</h1>
         <AdminLogin />
       </>
     );
@@ -62,7 +62,7 @@ async function AdminHome() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-[clamp(1.7rem,6vw,2.2rem)]">デッキの管理</h1>
+        <h1 className="font-display font-semibold tracking-[0.04em] text-[clamp(1.7rem,6vw,2.2rem)]">デッキの管理</h1>
         <AdminLogout />
       </div>
 
